@@ -108,6 +108,22 @@ class silog_loss(nn.Module):
         d = torch.log(depth_est[mask]) - torch.log(depth_gt[mask])
         return torch.sqrt((d ** 2).mean() - self.variance_focus * (d.mean() ** 2)) * 10.0
 
+class DiffLoss(nn.Module):
+    def __init__(self, lambd=0.5):
+        super().__init__()
+        self.lambd = lambd
+
+    def forward(self, pred, target,u_map=None):
+        if u_map==None:
+            mask = (target > 0).detach().float()
+            loss = ((torch.abs(target - pred) / (target + pred + 1e-7)) * mask).sum() / (mask + 1e-7).sum()
+        else:
+            eps = (abs(u_map) ==0).float()*1e-7
+            u_map = u_map+eps
+            mask = (target > 0).detach().float()
+            loss = (torch.abs(target - pred) / (target + pred + 1e-7))/u_map+torch.log(u_map)
+            loss = (loss * mask).sum() / (mask + 1e-7).sum()            
+        return loss
 
 def flip_lr(image):
     """

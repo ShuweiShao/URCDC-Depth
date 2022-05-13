@@ -90,6 +90,17 @@ class NewCRFDepth(nn.Module):
 
         self.init_weights(pretrained=pretrained)
 
+        #----------------------------------------CNN---------------------------------
+        channels_in2 = [2208, 384, 192]
+        channels_out2 = 96 ##channels of max resolution
+        self.decoder2 = Decoder_CNN(channels_in2, channels_out2)
+
+        self.last_layer_depth2 = nn.Sequential(
+            nn.Conv2d(channels_out2, channels_out2, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(channels_out2, 1, kernel_size=3, stride=1, padding=1))
+        #----------------------------------------------------------------------------
+
     def init_weights(self, pretrained=None):
         """Initialize the weights in backbone and heads.
 
@@ -120,9 +131,9 @@ class NewCRFDepth(nn.Module):
         up_disp = up_disp.permute(0, 1, 4, 2, 5, 3)
         return up_disp.reshape(N, 1, 4*H, 4*W)
 
-    def forward(self, imgs):
+    def forward(self, imgs,imgs2=None):
 
-        feats = self.backbone(imgs)
+        feats,feats_cnn = self.backbone(imgs,imgs2)
         if self.with_neck:
             feats = self.neck(feats)
 
@@ -143,9 +154,12 @@ class NewCRFDepth(nn.Module):
         else:
             d1 = self.disp_head1(e0, 4)
 
-        depth = d1 * self.max_depth
+        out_depth1 = d1 * self.max_depth
 
-        return depth
+        out2 = self.decoder2(feats_cnn[0],feats_cnn[1],feats_cnn[2],feats_cnn[3])
+        out_depth2 = self.last_layer_depth2(out2)
+        out_depth2 = torch.sigmoid(out_depth2) * self.max_depth
+        return {'pred_d': out_depth1,'pred_d2': out_depth2}
 
 
 class DispHead(nn.Module):
@@ -186,3 +200,75 @@ def upsample(x, scale_factor=2, mode="bilinear", align_corners=False):
     """Upsample input tensor by a factor of 2
     """
     return F.interpolate(x, scale_factor=scale_factor, mode=mode, align_corners=align_corners)
+
+class Decoder_CNN(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        self.bot_conv = nn.Conv2d(
+            in_channels=in_channels[0], out_channels=out_channels, kernel_size=1)
+        self.skip_conv1 = nn.Conv2d(
+            in_channels=in_channels[1], out_channels=out_channels, kernel_size=1)
+        self.skip_conv2 = nn.Conv2d(
+            in_channels=in_channels[2], out_channels=out_channels, kernel_size=1)
+
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+        
+        self.fusion1 = SelectiveFeatureFusion(out_channels)
+        self.fusion2 = SelectiveFeatureFusion(out_channels)
+        self.fusion3 = SelectiveFeatureFusion(out_channels)
+
+    def forward(self, x_1, x_2, x_3, x_4,out_list=None):
+        x_4_ = self.bot_conv(x_4)
+        out4 = self.up(x_4_)
+
+        x_3_ = self.skip_conv1(x_3)
+        out = self.fusion1(x_3_, out4)
+        out3 = self.up(out)
+
+        x_2_ = self.skip_conv2(x_2)
+        out = self.fusion2(x_2_, out3)
+        out2 = self.up(out)
+
+        out = self.fusion3(x_1, out2)
+        out = self.up(out)
+        out1 = self.up(out)
+        if out_list==True:
+            return out1,out2,out3,out4
+        else:
+            return out1
+
+
+class SelectiveFeatureFusion(nn.Module):
+    def __init__(self, in_channel=64):
+        super().__init__()
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels=int(in_channel*2),
+                      out_channels=in_channel, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(in_channel),
+            nn.ReLU())
+
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(in_channels=in_channel, 
+                      out_channels=int(in_channel / 2), kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(int(in_channel / 2)),
+            nn.ReLU())
+
+        self.conv3 = nn.Conv2d(in_channels=int(in_channel / 2), 
+                               out_channels=2, kernel_size=3, stride=1, padding=1)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x_local, x_global):
+        x = torch.cat((x_local, x_global), dim=1)#128 + 96  = 224
+        # print(x_local.shape,x_global.shape)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        attn = self.sigmoid(x)
+
+        out = x_local * attn[:, 0, :, :].unsqueeze(1) + \
+              x_global * attn[:, 1, :, :].unsqueeze(1)
+
+        return out

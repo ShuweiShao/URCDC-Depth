@@ -6,7 +6,8 @@ import numpy as np
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 
 from .newcrf_utils import load_checkpoint
-
+import torchvision.models as models
+from .conformer_blocks import ConvBlock
 
 class Mlp(nn.Module):
     """ Multilayer perceptron."""
@@ -486,7 +487,18 @@ class SwinTransformer(nn.Module):
                  frozen_stages=-1,
                  use_checkpoint=False):
         super().__init__()
+        #---------------------------DenseNet161-------------------------------
+        self.base_model = models.densenet161(pretrained=True).features
+        self.feat_names = ['relu0', 'pool0', 'transition1', 'transition2', 'norm5']
+        self.feat_out_channels = [96, 96, 192, 384, 2208]
 
+        self.fusion1 = ConvBlock(96,192)
+        self.fusion2 = ConvBlock(192,384)
+        self.fusion3 = ConvBlock(384,768)
+        self.fusion4 = ConvBlock(2208,1536)
+        self.fusion_t2c = [self.fusion1,self.fusion2,self.fusion3,self.fusion4]
+
+        #---------------------------DenseNet161-------------------------------
         self.pretrain_img_size = pretrain_img_size
         self.num_layers = len(depths)
         self.embed_dim = embed_dim
@@ -587,8 +599,12 @@ class SwinTransformer(nn.Module):
         else:
             raise TypeError('pretrained must be a str or None')
 
-    def forward(self, x):
+    def forward(self, x,x2=None):
         """Forward function."""
+        if x2 is not None:
+            feature = x2# CNN使用分支2 
+        else:
+            feature = x # 验证
         x = self.patch_embed(x)
 
         Wh, Ww = x.size(2), x.size(3)
@@ -601,18 +617,27 @@ class SwinTransformer(nn.Module):
         x = self.pos_drop(x)
 
         outs = []
-        for i in range(self.num_layers):
-            layer = self.layers[i]
-            x_out, H, W, x, Wh, Ww = layer(x, Wh, Ww)
+        skip_feat = []
+        i = 0
+        for k, v in self.base_model._modules.items():
+            if 'fc' in k or 'avgpool' in k:
+                continue
+            feature = v(feature)
+            if any(x in k for x in self.feat_names):
+                if('relu0' not in k):
+                    layer = self.layers[i]
+                    x_out, H, W, x, Wh, Ww = layer(x, Wh, Ww)# features in
+                    if i in self.out_indices:
+                        norm_layer = getattr(self, f'norm{i}')
+                        x_out = norm_layer(x_out)
+                        out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
+                        feature=self.fusion_t2c[i](feature,out)
 
-            if i in self.out_indices:
-                norm_layer = getattr(self, f'norm{i}')
-                x_out = norm_layer(x_out)
+                        i = i + 1
+                        skip_feat.append(feature)  
+                        outs.append(out)    
 
-                out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
-                outs.append(out)
-
-        return tuple(outs)
+        return outs,skip_feat
 
     def train(self, mode=True):
         """Convert the model into training mode while keep layers freezed."""
