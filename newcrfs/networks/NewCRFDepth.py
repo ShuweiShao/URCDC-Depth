@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from .swin_transformer import SwinTransformer
 from .newcrf_layers import NewCRF
 from .uper_crf_head import PSP
+from .conformer_blocks import ConvBlock
 ########################################################################################################################
 
 
@@ -77,6 +78,8 @@ class NewCRFDepth(nn.Module):
 
         self.decoder = PSP(**decoder_cfg)
         self.disp_head1 = DispHead(input_dim=crf_dims[0])
+        self.uncer_head1 = Uncer_Head(input_dim=crf_dims[0])
+
 
         self.up_mode = 'bilinear'
         if self.up_mode == 'mask':
@@ -93,12 +96,25 @@ class NewCRFDepth(nn.Module):
         #----------------------------------------CNN---------------------------------
         channels_in2 = [2208, 384, 192]
         channels_out2 = 96 ##channels of max resolution
+
         self.decoder2 = Decoder_CNN(channels_in2, channels_out2)
 
-        self.last_layer_depth2 = nn.Sequential(
+        self.last_layer_depth = nn.Sequential(
             nn.Conv2d(channels_out2, channels_out2, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=False),
             nn.Conv2d(channels_out2, 1, kernel_size=3, stride=1, padding=1))
+        self.last_layer_uncer = nn.Sequential(
+            nn.Conv2d(channels_out2, channels_out2, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(channels_out2, 1, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid())
+
+        # self.fusion1 = ConvBlock(96,192)
+        # self.fusion2 = ConvBlock(192,384)
+        # self.fusion3 = ConvBlock(384,768)
+        # self.fusion4 = ConvBlock(2208,1536)
+        # self.fusion_t2c = [self.fusion1,self.fusion2,self.fusion3,self.fusion4]
+
         #----------------------------------------------------------------------------
 
     def init_weights(self, pretrained=None):
@@ -150,21 +166,43 @@ class NewCRFDepth(nn.Module):
         if self.up_mode == 'mask':
             mask = self.mask_head(e0)
             d1 = self.disp_head1(e0, 1)
+            u1 = self.uncer_head1(e0, 1)
             d1 = self.upsample_mask(d1, mask)
+            u1 = self.upsample_mask(u1, mask)
         else:
             d1 = self.disp_head1(e0, 4)
+            u1 = self.uncer_head1(e0, 4)
 
         out_depth1 = d1 * self.max_depth
 
+        # for i in range(4):
+        #     feats_cnn[i] = self.fusion_t2c[i](feats_cnn[i],feats[i].detach())
+
         out2 = self.decoder2(feats_cnn[0],feats_cnn[1],feats_cnn[2],feats_cnn[3])
-        out_depth2 = self.last_layer_depth2(out2)
+        out_depth2 = self.last_layer_depth(out2)
         out_depth2 = torch.sigmoid(out_depth2) * self.max_depth
-        return {'pred_d': out_depth1,'pred_d2': out_depth2}
+        u2 = self.last_layer_uncer(out2)
+        return {'pred_d': out_depth1,'pred_d2': out_depth2,'u1':u1,'u2':u2}
 
 
 class DispHead(nn.Module):
     def __init__(self, input_dim=100):
         super(DispHead, self).__init__()
+        # self.norm1 = nn.BatchNorm2d(input_dim)
+        self.conv1 = nn.Conv2d(input_dim, 1, 3, padding=1)
+        # self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x, scale):
+        # x = self.relu(self.norm1(x))
+        x = self.sigmoid(self.conv1(x))
+        if scale > 1:
+            x = upsample(x, scale_factor=scale)
+        return x
+
+class Uncer_Head(nn.Module):
+    def __init__(self, input_dim=100):
+        super(Uncer_Head, self).__init__()
         # self.norm1 = nn.BatchNorm2d(input_dim)
         self.conv1 = nn.Conv2d(input_dim, 1, 3, padding=1)
         # self.relu = nn.ReLU(inplace=True)

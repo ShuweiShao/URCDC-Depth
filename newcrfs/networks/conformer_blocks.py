@@ -36,9 +36,7 @@ class ConvBlock(nn.Module):
     def forward(self, x, x_t, return_x_2=False):
         p = random.random()
         if p < 0.05 and self.training:
-            x_t = torch.zeros_like(x_t)
-        # if p >= 0 and not self.training:
-        #     x_t = torch.zeros_like(x_t)
+            return x
 
         x_t = self.bn(x_t)
         x_t = self.act(x_t)
@@ -48,7 +46,7 @@ class ConvBlock(nn.Module):
         x = self.bn1(x)
         x = self.act1(x)
 
-        x = self.conv2(x + x_t)
+        x = self.conv2(x+x_t)
         x = self.bn2(x)
         x2 = self.act2(x)
 

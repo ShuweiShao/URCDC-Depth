@@ -1,5 +1,5 @@
 --mode train
---model_name newcrfs_nyu
+--model_name newcrfs_nyu_fusion
 --encoder large07
 --pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
 --dataset nyu
@@ -20,10 +20,11 @@
 --log_directory ./models/
 --multiprocessing_distributed
 --dist_url tcp://127.0.0.1:2312
+--checkpoint_path models/0518/newcrfs_nyu_fusion/model-70500-best_rms_0.31697
 
 --log_freq 100
 --do_online_eval
---eval_freq 1000
+--eval_freq 1500
 --data_path_eval /mnt/data/liran/dataset/nyu_depth_v2/official_splits/test/
 --gt_path_eval /mnt/data/liran/dataset/nyu_depth_v2/official_splits/test/
 --filenames_file_eval data_splits/nyudepthv2_test_files_with_gt.txt

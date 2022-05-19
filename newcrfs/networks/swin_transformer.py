@@ -631,7 +631,7 @@ class SwinTransformer(nn.Module):
                         norm_layer = getattr(self, f'norm{i}')
                         x_out = norm_layer(x_out)
                         out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
-                        feature=self.fusion_t2c[i](feature,out)
+                        feature=self.fusion_t2c[i](feature,out.detach())
 
                         i = i + 1
                         skip_feat.append(feature)  

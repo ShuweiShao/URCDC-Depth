@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.distributed as dist
 from torch.utils.data import Sampler
 from torchvision import transforms
-
+import matplotlib.pyplot as plt
 import os, sys
 import numpy as np
 import math
@@ -113,16 +113,20 @@ class DiffLoss(nn.Module):
         super().__init__()
         self.lambd = lambd
 
-    def forward(self, pred, target,u_map=None):
+    def forward(self, pred, target, u_map=None):
         if u_map==None:
             mask = (target > 0).detach().float()
             loss = ((torch.abs(target - pred) / (target + pred + 1e-7)) * mask).sum() / (mask + 1e-7).sum()
         else:
-            eps = (abs(u_map) ==0).float()*1e-7
-            u_map = u_map+eps
+            # eps = (abs(u_map) ==0).float()*1e-7
+            # u_map = u_map+eps
+            # mask = (target > 0).detach().float()
+            # loss = (torch.abs(target - pred) / (target + pred + 1e-7))/u_map+torch.log(u_map)
+            # loss = (loss * mask).sum() / (mask + 1e-7).sum()   
             mask = (target > 0).detach().float()
-            loss = (torch.abs(target - pred) / (target + pred + 1e-7))/u_map+torch.log(u_map)
-            loss = (loss * mask).sum() / (mask + 1e-7).sum()            
+            mask = mask * u_map
+            # loss = ((torch.abs(target - pred) / (target + pred + 1e-7)) * mask).sum() / (mask + 1e-7).sum()
+            loss = (torch.abs(target - pred) * mask).sum() / (mask + 1e-7).sum()        
         return loss
 
 def flip_lr(image):
@@ -266,3 +270,33 @@ class DistributedSamplerNoEvenlyDivisible(Sampler):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
+
+def colormap(inputs, normalize=True, torch_transpose=True):
+    if isinstance(inputs, torch.Tensor):
+        inputs = inputs.detach().cpu().numpy()
+    _DEPTH_COLORMAP = plt.get_cmap('jet', 256)  # for plotting
+    vis = inputs
+    if normalize:
+        ma = float(vis.max())
+        mi = float(vis.min())
+        d = ma - mi if ma != mi else 1e5
+        vis = (vis - mi) / d
+
+    if vis.ndim == 4:
+        vis = vis.transpose([0, 2, 3, 1])
+        vis = _DEPTH_COLORMAP(vis)
+        vis = vis[:, :, :, 0, :3]
+        if torch_transpose:
+            vis = vis.transpose(0, 3, 1, 2)
+    elif vis.ndim == 3:
+        vis = _DEPTH_COLORMAP(vis)
+        vis = vis[:, :, :, :3]
+        if torch_transpose:
+            vis = vis.transpose(0, 3, 1, 2)
+    elif vis.ndim == 2:
+        vis = _DEPTH_COLORMAP(vis)
+        vis = vis[..., :3]
+        if torch_transpose:
+            vis = vis.transpose(2, 0, 1)
+
+    return vis[0,:,:,:]

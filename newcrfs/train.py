@@ -16,7 +16,8 @@ from utils import post_process_depth, flip_lr, silog_loss, compute_errors, eval_
                        block_print, enable_print, normalize_result, inv_normalize, convert_arg_line_to_args,\
                        DiffLoss
 from networks.NewCRFDepth import NewCRFDepth
-
+from datetime import datetime
+from utils import colormap
 
 parser = argparse.ArgumentParser(description='NeWCRFs PyTorch implementation.', fromfile_prefix_chars='@')
 parser.convert_arg_line_to_args = convert_arg_line_to_args
@@ -159,16 +160,16 @@ def online_eval(model, dataloader_eval, gpu, ngpus, post_process=False,pred_mode
         eval_measures[:9] += torch.tensor(measures).cuda(device=gpu)
         eval_measures[9] += 1
 
+
     if args.multiprocessing_distributed:
         group = dist.new_group([i for i in range(ngpus)])
         dist.all_reduce(tensor=eval_measures, op=dist.ReduceOp.SUM, group=group)
-
+        
     if not args.multiprocessing_distributed or gpu == 0:
         eval_measures_cpu = eval_measures.cpu()
         cnt = eval_measures_cpu[9].item()
         eval_measures_cpu /= cnt
         print('\n%s'%(pred_mode))
-        print("GPU memory occupied by tensors eval:",torch.cuda.memory_allocated(args.rank)/1048576,'MB')
         print('Computing errors for {} eval samples'.format(int(cnt)), ', post_process: ', post_process)
         print("{:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}".format('silog', 'abs_rel', 'log10', 'rms',
                                                                                      'sq_rel', 'log_rms', 'd1', 'd2',
@@ -176,8 +177,11 @@ def online_eval(model, dataloader_eval, gpu, ngpus, post_process=False,pred_mode
         for i in range(8):
             print('{:7.4f}, '.format(eval_measures_cpu[i]), end='')
         print('{:7.4f}'.format(eval_measures_cpu[8]))
+        torch.cuda.empty_cache()
         return eval_measures_cpu
 
+    eval_measures = eval_measures.cpu()
+    torch.cuda.empty_cache()
     return None
 
 
@@ -210,10 +214,10 @@ def main_worker(gpu, ngpus_per_node, args):
             torch.cuda.set_device(args.gpu)
             model.cuda(args.gpu)
             args.batch_size = int(args.batch_size / ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=False)
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
         else:
             model.cuda()
-            model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=False)
+            model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
     else:
         model = torch.nn.DataParallel(model)
         model.cuda()
@@ -298,8 +302,6 @@ def main_worker(gpu, ngpus_per_node, args):
     num_total_steps = args.num_epochs * steps_per_epoch
     epoch = global_step // steps_per_epoch
     
-    
-
     while epoch < args.num_epochs:
         if args.distributed:
             dataloader.train_sampler.set_epoch(epoch)
@@ -309,9 +311,10 @@ def main_worker(gpu, ngpus_per_node, args):
             before_op_time = time.time()
 
             image = torch.autograd.Variable(sample_batched['image'].cuda(args.gpu, non_blocking=True))
+            image2 = torch.autograd.Variable(sample_batched['image2'].cuda(args.gpu, non_blocking=True))
             depth_gt = torch.autograd.Variable(sample_batched['depth'].cuda(args.gpu, non_blocking=True))
 
-            preds = model(image,image)
+            preds = model(image,image2)
             depth_est = preds['pred_d']
             depth_est2 = preds['pred_d2']
 
@@ -322,9 +325,16 @@ def main_worker(gpu, ngpus_per_node, args):
 
             loss1 = silog_criterion(depth_est, depth_gt, mask.to(torch.bool))
             loss2 = silog_criterion(depth_est2, depth_gt, mask.to(torch.bool))
-            loss3 = criterion_diff(depth_est.squeeze(), depth_est2.squeeze().detach())
-            loss4 = criterion_diff(depth_est2.squeeze(), depth_est.squeeze().detach())
-            loss = loss1+loss2+0.05*loss3+0.1*loss4
+            loss3 = criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach())
+            loss4 = criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
+
+            u1_gt = torch.exp(-torch.abs(depth_gt-depth_est.detach()))
+            loss5 = torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
+
+            u2_gt = torch.exp(-torch.abs(depth_gt-depth_est2.detach()))
+            loss6 = torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
+            
+            loss = loss1+loss2+loss3+loss4+loss5+loss6
             loss.backward()
             for param_group in optimizer.param_groups:
                 current_lr = (args.learning_rate - end_learning_rate) * (1 - global_step / num_total_steps) ** 0.9 + end_learning_rate
@@ -357,11 +367,22 @@ def main_worker(gpu, ngpus_per_node, args):
                     writer.add_scalar('silog_loss', loss, global_step)
                     writer.add_scalar('learning_rate', current_lr, global_step)
                     writer.add_scalar('var average', var_sum.item()/var_cnt, global_step)
+                    writer.add_scalar('loss1', loss1, global_step)
+                    writer.add_scalar('loss2', loss2, global_step)
+                    writer.add_scalar('loss3', loss3, global_step)
+                    writer.add_scalar('loss4', loss4, global_step)
+                    writer.add_scalar('loss5', loss5, global_step)
+                    writer.add_scalar('loss6', loss6, global_step)
+
+
                     depth_gt = torch.where(depth_gt < 1e-3, depth_gt * 0 + 1e3, depth_gt)
                     for i in range(num_log_images):
                         writer.add_image('depth_gt/image/{}'.format(i), normalize_result(1/depth_gt[i, :, :, :].data), global_step)
-                        writer.add_image('depth_est/image/{}'.format(i), normalize_result(1/depth_est[i, :, :, :].data), global_step)
+                        writer.add_image('depth_est/image_trans/{}'.format(i), normalize_result(1/depth_est[i, :, :, :].data), global_step)
+                        writer.add_image('depth_est/image_cnn/{}'.format(i), normalize_result(1/depth_est2[i, :, :, :].data), global_step)
                         writer.add_image('image/image/{}'.format(i), inv_normalize(image[i, :, :, :]).data, global_step)
+                        writer.add_image('u1/u1/{}'.format(i), colormap(preds['u1'][i, :, :, :]), global_step)
+                        writer.add_image('u2/u2/{}'.format(i), colormap(preds['u2'][i, :, :, :]), global_step)
                     writer.flush()
 
             if args.do_online_eval and global_step and global_step % args.eval_freq == 0 and not model_just_loaded:
@@ -373,7 +394,24 @@ def main_worker(gpu, ngpus_per_node, args):
                                                 ngpus_per_node, post_process=True,pred_mode='Transformer')
                     eval_measures2 = online_eval(model, dataloader_eval, gpu, 
                                                 ngpus_per_node, post_process=True,pred_mode='CNN')
-                if eval_measures is not None:
+
+                if eval_measures is not None and eval_measures2 is not None:
+                    exp_name = '%s'%(datetime.now().strftime('%m%d'))
+                    log_txt = os.path.join(args.log_directory + '/' + args.model_name, exp_name+'_logs.txt')
+                    with open(log_txt, 'a') as txtfile:
+                        txtfile.write(">>>>>>>>>>>>>>>>>>>>>>>>>Step:%d>>>>>>>>>>>>>>>>>>>>>>>>>\n"%(int(global_step)))
+                        txtfile.write("{:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}\n".format('silog', 
+                                        'abs_rel', 'log10', 'rms','sq_rel', 'log_rms', 'd1', 'd2','d3'))
+                        txtfile.write("Transformer\n")
+                        line = ''
+                        line2 = ''
+                        for i in range(9):
+                            line +='{:7.4f}, '.format(eval_measures[i])
+                            line2 +='{:7.4f}, '.format(eval_measures2[i])
+                        txtfile.write(line+'\n')
+                        txtfile.write("CNN\n")
+                        txtfile.write(line2+'\n')
+
                     for i in range(9):
                         eval_summary_writer.add_scalar(eval_metrics[i], eval_measures[i].cpu(), int(global_step))
                         measure = eval_measures[i]
@@ -395,7 +433,7 @@ def main_worker(gpu, ngpus_per_node, args):
                                 os.system(command)
                             best_eval_steps[i] = global_step
                             model_save_name = '/model-{}-best_{}_{:.5f}'.format(global_step, eval_metrics[i], measure)
-                            print("GPU memory occupied by tensors save:",torch.cuda.memory_allocated(args.rank)/1048576,'MB')
+                            
                             print('New best for {}. Saving model: {}'.format(eval_metrics[i], model_save_name))
                             checkpoint = {'global_step': global_step,
                                           'model': model.state_dict(),
@@ -414,12 +452,8 @@ def main_worker(gpu, ngpus_per_node, args):
             global_step += 1
 
         epoch += 1
-        #
-
         del image,depth_gt,preds,loss
         torch.cuda.empty_cache()
-     
-        #
        
     if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % ngpus_per_node == 0):
         writer.close()
@@ -431,17 +465,19 @@ def main():
     if args.mode != 'train':
         print('train.py is only for training.')
         return -1
-        
-    command = 'mkdir ' + os.path.join(args.log_directory, args.model_name)
+    exp_name = '%s'%(datetime.now().strftime('%m%d'))  
+    args.log_directory = os.path.join(args.log_directory,exp_name)  
+    command = 'mkdir ' + os.path.join(args.log_directory ,args.model_name)
     os.system(command)
-
-    args_out_path = os.path.join(args.log_directory, args.model_name)
+    
+    args_out_path = os.path.join(args.log_directory ,args.model_name)
     command = 'cp ' + sys.argv[1] + ' ' + args_out_path
     os.system(command)
 
     save_files = True
     if save_files:
-        aux_out_path = os.path.join(args.log_directory, args.model_name)
+
+        aux_out_path = os.path.join(args.log_directory,args.model_name)
         networks_savepath = os.path.join(aux_out_path, 'networks')
         dataloaders_savepath = os.path.join(aux_out_path, 'dataloaders')
         command = 'cp newcrfs/train.py ' + aux_out_path

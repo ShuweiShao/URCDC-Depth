@@ -9,7 +9,7 @@ import os
 import random
 
 from utils import DistributedSamplerNoEvenlyDivisible
-
+import copy
 
 def _is_pil_image(img):
     return isinstance(img, Image.Image)
@@ -75,6 +75,7 @@ class DataLoadPreprocess(Dataset):
         self.transform = transform
         self.to_tensor = ToTensor
         self.is_for_online_eval = is_for_online_eval
+        self.count = 0
     
     def __getitem__(self, idx):
         sample_path = self.filenames[idx]
@@ -134,8 +135,8 @@ class DataLoadPreprocess(Dataset):
 
             if image.shape[0] != self.args.input_height or image.shape[1] != self.args.input_width:
                 image, depth_gt = self.random_crop(image, depth_gt, self.args.input_height, self.args.input_width)
-            image, depth_gt = self.train_preprocess(image, depth_gt)
-            sample = {'image': image, 'depth': depth_gt, 'focal': focal}
+            image,image2, depth_gt = self.train_preprocess(image, depth_gt)
+            sample = {'image': image, 'image2': image2,'depth': depth_gt, 'focal': focal}
         
         else:
             if self.mode == 'online_eval':
@@ -177,13 +178,13 @@ class DataLoadPreprocess(Dataset):
                     depth_gt = depth_gt[top_margin:top_margin + 352, left_margin:left_margin + 1216, :]
             
             if self.mode == 'online_eval':
-                sample = {'image': image, 'depth': depth_gt, 'focal': focal, 'has_valid_depth': has_valid_depth}
+                sample = {'image': image,'image2': image, 'depth': depth_gt, 'focal': focal, 'has_valid_depth': has_valid_depth}
             else:
                 sample = {'image': image, 'focal': focal}
         
         if self.transform:
             sample = self.transform(sample)
-        
+
         return sample
     
     def rotate_image(self, image, angle, flag=Image.BILINEAR):
@@ -207,13 +208,19 @@ class DataLoadPreprocess(Dataset):
         if do_flip > 0.5:
             image = (image[:, ::-1, :]).copy()
             depth_gt = (depth_gt[:, ::-1, :]).copy()
-    
+        
+        image = self.cutdepth(image, depth_gt)
         # Random gamma, brightness, color augmentation
         do_augment = random.random()
+        # do_augment2 = random.random()
+        
         if do_augment > 0.5:
             image = self.augment_image(image)
-    
-        return image, depth_gt
+        image2 = copy.deepcopy(image)          
+        # if do_augment2 > 0.5:
+        #     image2 = self.augment_image(image2)
+
+        return image,image2,depth_gt
     
     def augment_image(self, image):
         # gamma augmentation
@@ -239,6 +246,27 @@ class DataLoadPreprocess(Dataset):
     def __len__(self):
         return len(self.filenames)
 
+    def cutdepth(self, image, depth):
+        H, W, C = image.shape
+
+        if self.count % 4 == 0:
+            alpha = random.random()
+            beta = random.random()
+            p = 0.75
+
+            l = int(alpha * W)
+            w = int(max((W - alpha * W) * beta * p, 1))
+            if self.args.dataset == 'nyu':
+                image[:, l:l+w, 0] = depth[:, l:l+w, 0] / 10.0
+                image[:, l:l+w, 1] = depth[:, l:l+w, 0] / 10.0
+                image[:, l:l+w, 2] = depth[:, l:l+w, 0] / 10.0
+            else :
+                image[:, l:l+w, 0] = depth[:, l:l+w, 0] / 80.0
+                image[:, l:l+w, 1] = depth[:, l:l+w, 0] / 80.0
+                image[:, l:l+w, 2] = depth[:, l:l+w, 0] / 80.0
+        self.count += 1
+
+        return image
 
 class ToTensor(object):
     def __init__(self, mode):
@@ -246,9 +274,12 @@ class ToTensor(object):
         self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     
     def __call__(self, sample):
-        image, focal = sample['image'], sample['focal']
+        image, image2,focal = sample['image'], sample['image2'],sample['focal']
         image = self.to_tensor(image)
         image = self.normalize(image)
+        image2 = self.to_tensor(image2)
+        image2 = self.normalize(image2)
+
 
         if self.mode == 'test':
             return {'image': image, 'focal': focal}
@@ -256,7 +287,7 @@ class ToTensor(object):
         depth = sample['depth']
         if self.mode == 'train':
             depth = self.to_tensor(depth)
-            return {'image': image, 'depth': depth, 'focal': focal}
+            return {'image': image, 'image2': image2,'depth': depth, 'focal': focal}
         else:
             has_valid_depth = sample['has_valid_depth']
             return {'image': image, 'depth': depth, 'focal': focal, 'has_valid_depth': has_valid_depth}
