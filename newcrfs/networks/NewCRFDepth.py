@@ -147,9 +147,9 @@ class NewCRFDepth(nn.Module):
         up_disp = up_disp.permute(0, 1, 4, 2, 5, 3)
         return up_disp.reshape(N, 1, 4*H, 4*W)
 
-    def forward(self, imgs,imgs2=None):
+    def forward(self, imgs, imgs2=None):
 
-        feats,feats_cnn = self.backbone(imgs,imgs2)
+        feats, feats_cnn = self.backbone(imgs, imgs2)
         if self.with_neck:
             feats = self.neck(feats)
 

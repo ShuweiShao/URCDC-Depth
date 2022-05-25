@@ -314,7 +314,7 @@ def main_worker(gpu, ngpus_per_node, args):
             image2 = torch.autograd.Variable(sample_batched['image2'].cuda(args.gpu, non_blocking=True))
             depth_gt = torch.autograd.Variable(sample_batched['depth'].cuda(args.gpu, non_blocking=True))
 
-            preds = model(image,image2)
+            preds = model(image, image2)
             depth_est = preds['pred_d']
             depth_est2 = preds['pred_d2']
 
@@ -325,16 +325,22 @@ def main_worker(gpu, ngpus_per_node, args):
 
             loss1 = silog_criterion(depth_est, depth_gt, mask.to(torch.bool))
             loss2 = silog_criterion(depth_est2, depth_gt, mask.to(torch.bool))
-            loss3 = criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach())
-            loss4 = criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
+            loss3 = 0.1*criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach())
+            loss4 = 0.1*criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
 
             u1_gt = torch.exp(-torch.abs(depth_gt-depth_est.detach()))
-            loss5 = torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
+            loss5 = 0.25*torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
 
             u2_gt = torch.exp(-torch.abs(depth_gt-depth_est2.detach()))
-            loss6 = torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
+            loss6 = 0.25*torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
             
-            loss = loss1+loss2+loss3+loss4+loss5+loss6
+            if step % 2 == 1:
+                m1 = 0
+                m2 = 1
+            else:
+                m1 = 1
+                m2 = 0
+            loss = m1*(loss1+loss2+loss5+loss6)+m2*(loss3+loss4)
             loss.backward()
             for param_group in optimizer.param_groups:
                 current_lr = (args.learning_rate - end_learning_rate) * (1 - global_step / num_total_steps) ** 0.9 + end_learning_rate

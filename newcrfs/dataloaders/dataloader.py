@@ -209,7 +209,7 @@ class DataLoadPreprocess(Dataset):
             image = (image[:, ::-1, :]).copy()
             depth_gt = (depth_gt[:, ::-1, :]).copy()
         
-        image = self.cutdepth(image, depth_gt)
+        # image = self.cutdepth(image, depth_gt)
         # Random gamma, brightness, color augmentation
         do_augment = random.random()
         # do_augment2 = random.random()
