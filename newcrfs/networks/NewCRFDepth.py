@@ -69,6 +69,7 @@ class NewCRFDepth(nn.Module):
         self.backbone = SwinTransformer(**backbone_cfg)
         v_dim = decoder_cfg['num_classes']*4
         win = 7
+        # win = 12
         crf_dims = [128, 256, 512, 1024]
         v_dims = [64, 128, 256, embed_dim]
         self.crf3 = NewCRF(input_dim=in_channels[3], embed_dim=crf_dims[3], window_size=win, v_dim=v_dims[3], num_heads=32)

@@ -492,11 +492,11 @@ class SwinTransformer(nn.Module):
         self.feat_names = ['relu0', 'pool0', 'transition1', 'transition2', 'norm5']
         self.feat_out_channels = [96, 96, 192, 384, 2208]
 
-        self.fusion1 = ConvBlock(96,192)
-        self.fusion2 = ConvBlock(192,384)
-        self.fusion3 = ConvBlock(384,768)
-        self.fusion4 = ConvBlock(2208,1536)
-        self.fusion_t2c = [self.fusion1,self.fusion2,self.fusion3,self.fusion4]
+        self.fusion1 = ConvBlock(96, 192)
+        self.fusion2 = ConvBlock(192, 384)
+        self.fusion3 = ConvBlock(384, 768)
+        self.fusion4 = ConvBlock(2208, 1536)
+        self.fusion_t2c = [self.fusion1, self.fusion2, self.fusion3, self.fusion4]
 
         #---------------------------DenseNet161-------------------------------
         self.pretrain_img_size = pretrain_img_size

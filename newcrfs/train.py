@@ -329,10 +329,10 @@ def main_worker(gpu, ngpus_per_node, args):
             loss4 = 0.1*criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
 
             u1_gt = torch.exp(-torch.abs(depth_gt-depth_est.detach()))
-            loss5 = 0.25*torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
+            loss5 = 0.5*torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
 
             u2_gt = torch.exp(-torch.abs(depth_gt-depth_est2.detach()))
-            loss6 = 0.25*torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
+            loss6 = 0.5*torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
             
             if step % 2 == 1:
                 m1 = 0
