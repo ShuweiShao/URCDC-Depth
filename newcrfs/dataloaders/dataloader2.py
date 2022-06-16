@@ -305,8 +305,15 @@ class DataLoadPreprocess(Dataset):
         N = 2     # split numbers
         h_list=[]      
         h_interval_list = []        # hight interval
-        for i in range(N-1):
-            h_list.append(random.randint(int(0.2*h),int(0.8*h)))
+        if N==2:
+            h_list.append(random.randint(int(0.2*h), int(0.8*h)))
+        elif N==3:
+            h_list.append(random.randint(int(0.2*h), int(0.4*h)))
+            h_list.append(random.randint(int(0.6*h), int(0.8*h)))
+        elif N==4:
+            h_list.append((int(0.25*h)))
+            h_list.append((int(0.5*h)))
+            h_list.append((int(0.75*h)))        
         h_list.append(h)
         h_list.append(0)  
         h_list.sort()

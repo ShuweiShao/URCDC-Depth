@@ -253,7 +253,7 @@ class DataLoadPreprocess(Dataset):
         image_copy = copy.deepcopy(image)
         depth_copy = copy.deepcopy(depth)
         h,w,c = image.shape
-        N = 2     # split numbers
+        N = 2    # split numbers
         h_list=[]      
         h_interval_list = []        # hight interval
         for i in range(N-1):

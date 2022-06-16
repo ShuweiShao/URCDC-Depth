@@ -94,7 +94,7 @@ elif args.dataset == 'kittipred':
     from dataloaders.dataloader_kittipred import NewDataLoader
 
 
-def online_eval(model, dataloader_eval, gpu, ngpus, post_process=False,pred_mode='Transformer'):
+def online_eval(model, dataloader_eval, gpu, ngpus, group, post_process=False,pred_mode='Transformer'):
     eval_measures = torch.zeros(10).cuda(device=gpu)
     for _, eval_sample_batched in enumerate(tqdm(dataloader_eval.data)):
         with torch.no_grad():
@@ -162,7 +162,7 @@ def online_eval(model, dataloader_eval, gpu, ngpus, post_process=False,pred_mode
 
 
     if args.multiprocessing_distributed:
-        group = dist.new_group([i for i in range(ngpus)])
+        # group = dist.new_group([i for i in range(ngpus)])
         dist.all_reduce(tensor=eval_measures, op=dist.ReduceOp.SUM, group=group)
         
     if not args.multiprocessing_distributed or gpu == 0:
@@ -301,7 +301,8 @@ def main_worker(gpu, ngpus_per_node, args):
     steps_per_epoch = len(dataloader.data)
     num_total_steps = args.num_epochs * steps_per_epoch
     epoch = global_step // steps_per_epoch
-    
+
+    group = dist.new_group([i for i in range(ngpus_per_node)])
     while epoch < args.num_epochs:
         if args.distributed:
             dataloader.train_sampler.set_epoch(epoch)
@@ -397,9 +398,9 @@ def main_worker(gpu, ngpus_per_node, args):
                 with torch.no_grad():
 
                     eval_measures = online_eval(model, dataloader_eval, gpu, 
-                                                ngpus_per_node, post_process=True,pred_mode='Transformer')
+                                                ngpus_per_node, group, post_process=True, pred_mode='Transformer')
                     eval_measures2 = online_eval(model, dataloader_eval, gpu, 
-                                                ngpus_per_node, post_process=True,pred_mode='CNN')
+                                                ngpus_per_node, group, post_process=True, pred_mode='CNN')
 
                 if eval_measures is not None and eval_measures2 is not None:
                     exp_name = '%s'%(datetime.now().strftime('%m%d'))
@@ -458,8 +459,8 @@ def main_worker(gpu, ngpus_per_node, args):
             global_step += 1
 
         epoch += 1
-        del image,depth_gt,preds,loss
-        torch.cuda.empty_cache()
+        # del image,depth_gt,preds,loss
+        # torch.cuda.empty_cache()
        
     if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % ngpus_per_node == 0):
         writer.close()
