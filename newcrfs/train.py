@@ -88,7 +88,7 @@ if sys.argv.__len__() == 2:
 else:
     args = parser.parse_args()
 
-if args.dataset == 'kitti' or args.dataset == 'nyu':
+if args.dataset == 'kitti' or args.dataset == 'nyu' or args.dataset == 'kitti_benchmark':
     from dataloaders.dataloader import NewDataLoader
 elif args.dataset == 'kittipred':
     from dataloaders.dataloader_kittipred import NewDataLoader
@@ -148,7 +148,7 @@ def online_eval(model, dataloader_eval, gpu, ngpus, group, post_process=False,pr
                 eval_mask[int(0.40810811 * gt_height):int(0.99189189 * gt_height), int(0.03594771 * gt_width):int(0.96405229 * gt_width)] = 1
 
             elif args.eigen_crop:
-                if args.dataset == 'kitti':
+                if args.dataset == 'kitti' or args.dataset == 'kitti_benchmark':
                     eval_mask[int(0.3324324 * gt_height):int(0.91351351 * gt_height), int(0.0359477 * gt_width):int(0.96405229 * gt_width)] = 1
                 elif args.dataset == 'nyu':
                     eval_mask[45:471, 41:601] = 1

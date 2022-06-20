@@ -80,7 +80,7 @@ class DataLoadPreprocess(Dataset):
     
     def __getitem__(self, idx):
         sample_path = self.filenames[idx]
-        sample_path_random = self.filenames[random.randint(0,self.sample_nums)]
+        sample_path_random = self.filenames[random.randint(0,len(self.filenames)-1)]
         # focal = float(sample_path.split()[2])
         focal = 518.8579
 
@@ -184,7 +184,7 @@ class DataLoadPreprocess(Dataset):
                 image, depth_gt = self.random_crop(image, depth_gt, self.args.input_height, self.args.input_width)
                 # new add
                 image_random, depth_gt_random = self.random_crop(image_random, depth_gt_random, self.args.input_height, self.args.input_width)
-            image,depth_gt = self.graft(image,depth_gt)
+            image,depth_gt = self.graft(image,depth_gt,image_random, depth_gt_random)
             image,depth_gt = self.split_flip(image,depth_gt)
             image,image2, depth_gt = self.train_preprocess(image, depth_gt)
             sample = {'image': image, 'image2': image2,'depth': depth_gt, 'focal': focal}
