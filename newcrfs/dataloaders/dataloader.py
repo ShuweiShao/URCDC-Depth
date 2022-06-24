@@ -163,7 +163,6 @@ class DataLoadPreprocess(Dataset):
                 elif self.args.dataset == 'kitti_benchmark':
                     # depth_path = os.path.join(gt_path, "./" + sample_path.split()[1])
                     depth_path = gt_path+sample_path.split()[1]
-                # print("debug:",depth_path)
                 has_valid_depth = False
                 try:
                     depth_gt = Image.open(depth_path)
@@ -192,7 +191,7 @@ class DataLoadPreprocess(Dataset):
             if self.mode == 'online_eval':
                 sample = {'image': image,'image2': image, 'depth': depth_gt, 'focal': focal, 'has_valid_depth': has_valid_depth}
             else:
-                sample = {'image': image, 'focal': focal}
+                sample = {'image': image,'image2': image ,'focal': focal}
         
         if self.transform:
             sample = self.transform(sample)

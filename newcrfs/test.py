@@ -44,7 +44,7 @@ if sys.argv.__len__() == 2:
 else:
     args = parser.parse_args()
 
-if args.dataset == 'kitti' or args.dataset == 'nyu':
+if args.dataset == 'kitti' or args.dataset == 'nyu' or args.dataset == 'kitti_benchmark':
     from dataloaders.dataloader import NewDataLoader
 elif args.dataset == 'kittipred':
     from dataloaders.dataloader_kittipred import NewDataLoader
@@ -89,12 +89,15 @@ def test(params):
         for _, sample in enumerate(tqdm(dataloader.data)):
             image = Variable(sample['image'].cuda())
             # Predict
-            depth_est = model(image)
+            preds = model(image)
+            pred_depth = preds['pred_d']
+
             post_process = True
             if post_process:
                 image_flipped = flip_lr(image)
-                depth_est_flipped = model(image_flipped)
-                depth_est = post_process_depth(depth_est, depth_est_flipped)
+                preds2 = model(image_flipped)
+                pred_depth_flipped = preds2['pred_d']
+                depth_est = post_process_depth(pred_depth, pred_depth_flipped)
 
             pred_depth = depth_est.cpu().numpy().squeeze()
 
@@ -111,8 +114,8 @@ def test(params):
     elapsed_time = time.time() - start_time
     print('Elapesed time: %s' % str(elapsed_time))
     print('Done.')
-    
-    save_name = 'models/result_' + args.model_name
+    exp_name = '%s'%(datetime.now().strftime('%m%d'))
+    save_name = 'models/%s/result_'%(exp_name) + args.model_name
     
     print('Saving result pngs..')
     if not os.path.exists(save_name):
@@ -134,7 +137,7 @@ def test(params):
             filename_cmap_png = save_name + '/cmap/' + date_drive + '_' + lines[s].split()[0].split('/')[
                 -1].replace('.jpg', '.png')
             filename_image_png = save_name + '/rgb/' + date_drive + '_' + lines[s].split()[0].split('/')[-1]
-        elif args.dataset == 'kittipred':
+        elif args.dataset == 'kitti_benchmark':
             filename_pred_png = save_name + '/raw/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
             filename_cmap_png = save_name + '/cmap/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
             filename_image_png = save_name + '/rgb/' + lines[s].split()[0].split('/')[-1]
@@ -157,7 +160,7 @@ def test(params):
         
         pred_depth = pred_depths[s]
         
-        if args.dataset == 'kitti' or args.dataset == 'kittipred':
+        if args.dataset == 'kitti' or args.dataset == 'kitti_benchmark':
             pred_depth_scaled = pred_depth * 256.0
         else:
             pred_depth_scaled = pred_depth * 1000.0

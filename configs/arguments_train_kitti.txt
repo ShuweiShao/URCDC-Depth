@@ -21,6 +21,7 @@
 --log_directory ./models/
 --multiprocessing_distributed
 --dist_url tcp://127.0.0.1:2347
+--use_right
 
 --log_freq 100
 --do_online_eval
