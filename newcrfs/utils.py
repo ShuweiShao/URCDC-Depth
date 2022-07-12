@@ -113,20 +113,23 @@ class DiffLoss(nn.Module):
         super().__init__()
         self.lambd = lambd
 
-    def forward(self, pred, target, u_map=None):
-        if u_map==None:
-            mask = (target > 0).detach().float()
-            loss = ((torch.abs(target - pred) / (target + pred + 1e-7)) * mask).sum() / (mask + 1e-7).sum()
-        else:
+    def forward(self, pred, target, u_map, mask=None):
+        # if u_map==None:
+        #     mask = (target > 0).detach().float()
+        #     loss = ((torch.abs(target - pred) / (target + pred + 1e-7)) * mask).sum() / (mask + 1e-7).sum()
+        # else:
             # eps = (abs(u_map) ==0).float()*1e-7
             # u_map = u_map+eps
             # mask = (target > 0).detach().float()
             # loss = (torch.abs(target - pred) / (target + pred + 1e-7))/u_map+torch.log(u_map)
             # loss = (loss * mask).sum() / (mask + 1e-7).sum()   
-            mask = (target > 0).detach().float()
-            mask = mask * u_map
+        # mask = (target > 0).detach().float()
+        if mask==None:
+            mask_u = u_map
+        else:
+            mask_u = mask * u_map
             # loss = ((torch.abs(target - pred) / (target + pred + 1e-7)) * mask).sum() / (mask + 1e-7).sum()
-            loss = (torch.abs(target - pred) * mask).sum() / (mask + 1e-7).sum()        
+        loss = (torch.abs(target - pred) * mask_u).sum() / (mask_u + 1e-7).sum()        
         return loss
 
 def flip_lr(image):

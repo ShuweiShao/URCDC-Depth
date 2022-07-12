@@ -1,5 +1,5 @@
 --mode train
---model_name newcrfs_nyu_fusion_alternative_split_2
+--model_name urcd_nyu_fusion_alternative
 --encoder large07
 --pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
 --dataset nyu

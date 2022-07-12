@@ -326,14 +326,16 @@ def main_worker(gpu, ngpus_per_node, args):
 
             loss1 = silog_criterion(depth_est, depth_gt, mask.to(torch.bool))
             loss2 = silog_criterion(depth_est2, depth_gt, mask.to(torch.bool))
-            loss3 = criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach())
-            loss4 = criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
+            loss3 =  criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach())
+            loss4 =  criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
+            # loss3 =  criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach(),mask.float())
+            # loss4 =  criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach(),mask.float())
 
-            u1_gt = torch.exp(-torch.abs(depth_gt-depth_est.detach()))
-            loss5 = torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
+            u1_gt = torch.exp(-5 * torch.abs(depth_gt - depth_est.detach()) / (depth_gt + depth_est.detach() + 1e-7))
+            loss5 =  torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
 
-            u2_gt = torch.exp(-torch.abs(depth_gt-depth_est2.detach()))
-            loss6 = torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
+            u2_gt = torch.exp(-5 * torch.abs(depth_gt - depth_est2.detach()) / (depth_gt + depth_est2.detach() + 1e-7))
+            loss6 =  torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
             
             if step % 2 == 1:
                 m1 = 0

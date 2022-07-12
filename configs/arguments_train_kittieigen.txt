@@ -1,5 +1,5 @@
 --mode train
---model_name newcrfs_kittieigen_fusion_alternative_split_2
+--model_name newcrfs_kittieigen_fusion_alternative_split_mask
 --encoder large07
 --pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
 --dataset kitti

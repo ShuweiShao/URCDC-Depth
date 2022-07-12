@@ -142,7 +142,7 @@ class DataLoadPreprocess(Dataset):
             if image.shape[0] != self.args.input_height or image.shape[1] != self.args.input_width:
                 image, depth_gt = self.random_crop(image, depth_gt, self.args.input_height, self.args.input_width)
             
-            image,depth_gt = self.split_graft(image,depth_gt)
+            # image,depth_gt = self.split_flip(image,depth_gt)
             image,image2, depth_gt = self.train_preprocess(image, depth_gt)
             sample = {'image': image, 'image2': image2,'depth': depth_gt, 'focal': focal}
         
@@ -254,7 +254,7 @@ class DataLoadPreprocess(Dataset):
 
         return image_aug
     
-    def split_graft(self,image,depth):
+    def split_flip(self,image,depth):
 
         p = random.random()
         if p<0.5:

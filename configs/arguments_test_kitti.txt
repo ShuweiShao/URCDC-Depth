@@ -1,6 +1,6 @@
---model_name newcrfs_kitti_benchmark_rmse
+--model_name urcd_kitti_benchmark_silog_6.5814
 --encoder large07
---dataset kitti_benchmark
+--dataset kitti
 --input_height 352
 --input_width 1216
 --max_depth 80
@@ -10,4 +10,4 @@
 --filenames_file data_splits/kitti_official_test.txt
 --max_depth 80
 --save_viz
---checkpoint_path models/0621/newcrfs_kitti_benchmark_fusion_alternative_split_2/model-226000-best_rms_2.02750
+--checkpoint_path models/0704/newcrfs_kitti_benchmark_fusion_alternative_split_mask/model-258000-best_silog_6.85140

@@ -11,7 +11,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+from datetime import datetime
 from utils import post_process_depth, flip_lr
 from networks.NewCRFDepth import NewCRFDepth
 
@@ -133,9 +133,9 @@ def test(params):
         if args.dataset == 'kitti':
             date_drive = lines[s].split('/')[1]
             filename_pred_png = save_name + '/raw/' + date_drive + '_' + lines[s].split()[0].split('/')[-1].replace(
-                '.jpg', '.png')
+                '.png', '_urcd.png')
             filename_cmap_png = save_name + '/cmap/' + date_drive + '_' + lines[s].split()[0].split('/')[
-                -1].replace('.jpg', '.png')
+                -1].replace('.png', '_urcd.png')
             filename_image_png = save_name + '/rgb/' + date_drive + '_' + lines[s].split()[0].split('/')[-1]
         elif args.dataset == 'kitti_benchmark':
             filename_pred_png = save_name + '/raw/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
@@ -159,23 +159,28 @@ def test(params):
             gt[gt == 0] = np.amax(gt)
         
         pred_depth = pred_depths[s]
+
         
         if args.dataset == 'kitti' or args.dataset == 'kitti_benchmark':
             pred_depth_scaled = pred_depth * 256.0
         else:
             pred_depth_scaled = pred_depth * 1000.0
+
         
         pred_depth_scaled = pred_depth_scaled.astype(np.uint16)
         cv2.imwrite(filename_pred_png, pred_depth_scaled, [cv2.IMWRITE_PNG_COMPRESSION, 0])
         
         if args.save_viz:
-            cv2.imwrite(filename_image_png, image[10:-1 - 9, 10:-1 - 9, :])
+            # cv2.imwrite(filename_image_png, image[10:-1 - 9, 10:-1 - 9, :])
             if args.dataset == 'nyu':
-                plt.imsave(filename_gt_png, (10 - gt) / 10, cmap='plasma')
+                plt.imsave(filename_gt_png, (10 - gt) / 10, cmap='jet')
                 pred_depth_cropped = pred_depth[10:-1 - 9, 10:-1 - 9]
-                plt.imsave(filename_cmap_png, (10 - pred_depth) / 10, cmap='plasma')
+                # mask = 10*(pred_depth>10)
+                # pred_depth = pred_depth+mask
+                plt.imsave(filename_cmap_png, (10 - pred_depth) / 10, cmap='jet')
             else:
-                plt.imsave(filename_cmap_png, np.log10(pred_depth), cmap='Greys')
+                plt.imsave(filename_cmap_png, np.log10(pred_depth), cmap='magma')
+                # plt.imsave(filename_cmap_png, pred_depth, cmap='magma')
     
     return
 
