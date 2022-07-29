@@ -183,8 +183,8 @@ class NewCRFDepth(nn.Module):
         out_depth2 = self.last_layer_depth(out2)
         out_depth2 = torch.sigmoid(out_depth2) * self.max_depth
         u2 = self.last_layer_uncer(out2)
+        # return {'pred_d': out_depth1,'pred_d2': out_depth2}
         return {'pred_d': out_depth1,'pred_d2': out_depth2,'u1':u1,'u2':u2}
-
 
 class DispHead(nn.Module):
     def __init__(self, input_dim=100):

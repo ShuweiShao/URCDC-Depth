@@ -84,13 +84,17 @@ def test(params):
     print('now testing {} files with {}'.format(num_test_samples, args.checkpoint_path))
 
     pred_depths = []
+    u1_list = []
+    u2_list = []
     start_time = time.time()
     with torch.no_grad():
         for _, sample in enumerate(tqdm(dataloader.data)):
             image = Variable(sample['image'].cuda())
             # Predict
             preds = model(image)
-            pred_depth = preds['pred_d']
+            pred_depth = preds['pred_d2']
+            u_1 = preds['u1'] 
+            u_2 = preds['u2'] 
 
             post_process = True
             if post_process:
@@ -100,6 +104,8 @@ def test(params):
                 depth_est = post_process_depth(pred_depth, pred_depth_flipped)
 
             pred_depth = depth_est.cpu().numpy().squeeze()
+            u_1 = u_1.cpu().numpy().squeeze()
+            u_2 = u_2.cpu().numpy().squeeze()
 
             if args.do_kb_crop:
                 height, width = 352, 1216
@@ -110,6 +116,8 @@ def test(params):
                 pred_depth = pred_depth_uncropped
 
             pred_depths.append(pred_depth)
+            u1_list.append(u_1)
+            u2_list.append(u_2)
 
     elapsed_time = time.time() - start_time
     print('Elapesed time: %s' % str(elapsed_time))
@@ -125,6 +133,8 @@ def test(params):
             os.mkdir(save_name + '/cmap')
             os.mkdir(save_name + '/rgb')
             os.mkdir(save_name + '/gt')
+            os.mkdir(save_name + '/u1')
+            os.mkdir(save_name+'/u2')
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
@@ -137,28 +147,39 @@ def test(params):
             filename_cmap_png = save_name + '/cmap/' + date_drive + '_' + lines[s].split()[0].split('/')[
                 -1].replace('.png', '_urcd.png')
             filename_image_png = save_name + '/rgb/' + date_drive + '_' + lines[s].split()[0].split('/')[-1]
+            filename_u1 = save_name + '/u1/' + date_drive + '_' + lines[s].split()[0].split('/')[-1].replace(
+                '.png', '_u1.png')
+            filename_u2 = save_name + '/u2/' + date_drive + '_' + lines[s].split()[0].split('/')[-1].replace(
+                '.png', '_u2.png')    
         elif args.dataset == 'kitti_benchmark':
             filename_pred_png = save_name + '/raw/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
             filename_cmap_png = save_name + '/cmap/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
             filename_image_png = save_name + '/rgb/' + lines[s].split()[0].split('/')[-1]
+            filename_u1 = save_name + '/u1/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
+            filename_u2 = save_name + '/u2/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
         else:
             scene_name = lines[s].split()[0].split('/')[0]
             filename_pred_png = save_name + '/raw/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace(
                 '.jpg', '.png')
-            filename_cmap_png = save_name + '/cmap/' + scene_name + '_' + lines[s].split()[0].split('/rgb_')[1].replace(
-                '.jpg', '.png')
-            filename_gt_png = save_name + '/gt/' + scene_name + '_' + lines[s].split()[0].split('/rgb_')[1].replace(
+            filename_cmap_png = save_name + '/cmap/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace(
+                '.jpg', '_urcd.png')
+            filename_gt_png = save_name + '/gt/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace(
                 '.jpg', '_gt.png')
             filename_image_png = save_name + '/rgb/' + scene_name + '_' + lines[s].split()[0].split('/rgb_')[1]
-        
+            filename_u1 = save_name + '/u1/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace(
+                '.jpg', '_u1.png')
+            filename_u2 = save_name + '/u2/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace(
+                '.jpg', '_u2.png')
         rgb_path = os.path.join(args.data_path, './' + lines[s].split()[0])
         image = cv2.imread(rgb_path)
         if args.dataset == 'nyu':
             gt_path = os.path.join(args.data_path, './' + lines[s].split()[1])
             gt = cv2.imread(gt_path, -1).astype(np.float32) / 1000.0  # Visualization purpose only
-            gt[gt == 0] = np.amax(gt)
+            # gt[gt == 0] = np.amax(gt)
         
         pred_depth = pred_depths[s]
+        u_1 = u1_list[s]
+        u_2 = u2_list[s]
 
         
         if args.dataset == 'kitti' or args.dataset == 'kitti_benchmark':
@@ -173,14 +194,17 @@ def test(params):
         if args.save_viz:
             # cv2.imwrite(filename_image_png, image[10:-1 - 9, 10:-1 - 9, :])
             if args.dataset == 'nyu':
-                plt.imsave(filename_gt_png, (10 - gt) / 10, cmap='jet')
+                gt = np.where(gt<1e-3,gt*0+1e-3,gt)
+                plt.imsave(filename_gt_png, gt, cmap='jet')
                 pred_depth_cropped = pred_depth[10:-1 - 9, 10:-1 - 9]
-                # mask = 10*(pred_depth>10)
-                # pred_depth = pred_depth+mask
-                plt.imsave(filename_cmap_png, (10 - pred_depth) / 10, cmap='jet')
+                plt.imsave(filename_cmap_png, np.log10(pred_depth[10:-1 - 9, 10:-1 - 9]), cmap='jet')
+                plt.imsave(filename_u1, u_1[10:-1 - 9, 10:-1 - 9], cmap='jet')
+                plt.imsave(filename_u2, u_2[10:-1 - 9, 10:-1 - 9], cmap='jet')
             else:
                 plt.imsave(filename_cmap_png, np.log10(pred_depth), cmap='magma')
                 # plt.imsave(filename_cmap_png, pred_depth, cmap='magma')
+                plt.imsave(filename_u1, u_1, cmap='jet')
+                plt.imsave(filename_u2, u_2, cmap='jet')
     
     return
 

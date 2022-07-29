@@ -69,10 +69,14 @@ def eval(model, dataloader_eval, post_process=False):
                 # print('Invalid depth. continue.')
                 continue
 
-            pred_depth = model(image)
+            preds = model(image)
+            pred_depth = preds['pred_d']
+
             if post_process:
                 image_flipped = flip_lr(image)
-                pred_depth_flipped = model(image_flipped)
+                preds2 = model(image_flipped)
+                pred_depth_flipped = preds2['pred_d']
+
                 pred_depth = post_process_depth(pred_depth, pred_depth_flipped)
 
             pred_depth = pred_depth.cpu().numpy().squeeze()

@@ -326,16 +326,16 @@ def main_worker(gpu, ngpus_per_node, args):
 
             loss1 = silog_criterion(depth_est, depth_gt, mask.to(torch.bool))
             loss2 = silog_criterion(depth_est2, depth_gt, mask.to(torch.bool))
-            loss3 =  criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach())
-            loss4 =  criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach())
-            # loss3 =  criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach(),mask.float())
-            # loss4 =  criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach(),mask.float())
+            # loss3 = 0.1* criterion_diff(depth_est, depth_est2.detach(),mask = mask.float())
+            # loss4 = 0.1* criterion_diff(depth_est2, depth_est.detach(),mask = mask.float())
+            loss3 =  0.1*criterion_diff(depth_est, depth_est2.detach(), preds['u2'].detach(),mask.float())
+            loss4 =  0.1*criterion_diff(depth_est2, depth_est.detach(), preds['u1'].detach(),mask.float())
 
             u1_gt = torch.exp(-5 * torch.abs(depth_gt - depth_est.detach()) / (depth_gt + depth_est.detach() + 1e-7))
-            loss5 =  torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
+            loss5 = 0.5* torch.abs(u1_gt[mask.to(torch.bool)]-preds['u1'][mask.to(torch.bool)]).mean()
 
             u2_gt = torch.exp(-5 * torch.abs(depth_gt - depth_est2.detach()) / (depth_gt + depth_est2.detach() + 1e-7))
-            loss6 =  torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
+            loss6 = 0.5* torch.abs(u2_gt[mask.to(torch.bool)]-preds['u2'][mask.to(torch.bool)]).mean()
             
             if step % 2 == 1:
                 m1 = 0
@@ -344,6 +344,8 @@ def main_worker(gpu, ngpus_per_node, args):
                 m1 = 1
                 m2 = 0
             loss = m1*(loss1+loss2+loss5+loss6)+m2*(loss3+loss4)
+            # loss = m1*(loss1+loss2)+m2*(loss3+loss4)
+            # loss = loss1+loss2
             loss.backward()
             for param_group in optimizer.param_groups:
                 current_lr = (args.learning_rate - end_learning_rate) * (1 - global_step / num_total_steps) ** 0.9 + end_learning_rate
@@ -378,10 +380,10 @@ def main_worker(gpu, ngpus_per_node, args):
                     writer.add_scalar('var average', var_sum.item()/var_cnt, global_step)
                     writer.add_scalar('loss1', loss1, global_step)
                     writer.add_scalar('loss2', loss2, global_step)
-                    writer.add_scalar('loss3', loss3, global_step)
-                    writer.add_scalar('loss4', loss4, global_step)
-                    writer.add_scalar('loss5', loss5, global_step)
-                    writer.add_scalar('loss6', loss6, global_step)
+                    # writer.add_scalar('loss3', loss3, global_step)
+                    # writer.add_scalar('loss4', loss4, global_step)
+                    # writer.add_scalar('loss5', loss5, global_step)
+                    # writer.add_scalar('loss6', loss6, global_step)
 
 
                     depth_gt = torch.where(depth_gt < 1e-3, depth_gt * 0 + 1e3, depth_gt)
@@ -390,8 +392,8 @@ def main_worker(gpu, ngpus_per_node, args):
                         writer.add_image('depth_est/image_trans/{}'.format(i), normalize_result(1/depth_est[i, :, :, :].data), global_step)
                         writer.add_image('depth_est/image_cnn/{}'.format(i), normalize_result(1/depth_est2[i, :, :, :].data), global_step)
                         writer.add_image('image/image/{}'.format(i), inv_normalize(image[i, :, :, :]).data, global_step)
-                        writer.add_image('u1/u1/{}'.format(i), colormap(preds['u1'][i, :, :, :]), global_step)
-                        writer.add_image('u2/u2/{}'.format(i), colormap(preds['u2'][i, :, :, :]), global_step)
+                        # writer.add_image('u1/u1/{}'.format(i), colormap(preds['u1'][i, :, :, :]), global_step)
+                        # writer.add_image('u2/u2/{}'.format(i), colormap(preds['u2'][i, :, :, :]), global_step)
                     writer.flush()
 
             if args.do_online_eval and global_step and global_step % args.eval_freq == 0 and not model_just_loaded:

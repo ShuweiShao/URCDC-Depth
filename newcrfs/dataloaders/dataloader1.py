@@ -89,6 +89,12 @@ class DataLoadPreprocess(Dataset):
                 if self.args.use_right is True and random.random() > 0.5:
                     rgb_file.replace('image_02', 'image_03')
                     depth_file.replace('image_02', 'image_03')
+            elif self.args.dataset == 'kitti_benchmark':
+                rgb_file = sample_path.split()[0]
+                depth_file = os.path.join(sample_path.split()[0].split('/')[0], sample_path.split()[2])
+                if self.args.use_right is True and random.random() > 0.5:
+                    rgb_file.replace('image_02', 'image_03')
+                    depth_file.replace('image_02', 'image_03')
             else:
                 rgb_file = sample_path.split()[0]
                 depth_file = sample_path.split()[1]
@@ -136,7 +142,7 @@ class DataLoadPreprocess(Dataset):
             if image.shape[0] != self.args.input_height or image.shape[1] != self.args.input_width:
                 image, depth_gt = self.random_crop(image, depth_gt, self.args.input_height, self.args.input_width)
             
-            image,depth_gt = self.split_graft(image,depth_gt)
+            # image,depth_gt = self.split_flip(image,depth_gt)
             image,image2, depth_gt = self.train_preprocess(image, depth_gt)
             sample = {'image': image, 'image2': image2,'depth': depth_gt, 'focal': focal}
         
@@ -154,6 +160,9 @@ class DataLoadPreprocess(Dataset):
                 depth_path = os.path.join(gt_path, "./" + sample_path.split()[1])
                 if self.args.dataset == 'kitti':
                     depth_path = os.path.join(gt_path, sample_path.split()[0].split('/')[0], sample_path.split()[1])
+                elif self.args.dataset == 'kitti_benchmark':
+                    # depth_path = os.path.join(gt_path, "./" + sample_path.split()[1])
+                    depth_path = gt_path+sample_path.split()[1]
                 has_valid_depth = False
                 try:
                     depth_gt = Image.open(depth_path)
@@ -182,7 +191,7 @@ class DataLoadPreprocess(Dataset):
             if self.mode == 'online_eval':
                 sample = {'image': image,'image2': image, 'depth': depth_gt, 'focal': focal, 'has_valid_depth': has_valid_depth}
             else:
-                sample = {'image': image, 'focal': focal}
+                sample = {'image': image,'image2': image ,'focal': focal}
         
         if self.transform:
             sample = self.transform(sample)
@@ -245,7 +254,7 @@ class DataLoadPreprocess(Dataset):
 
         return image_aug
     
-    def split_graft(self,image,depth):
+    def split_flip(self,image,depth):
 
         p = random.random()
         if p<0.5:

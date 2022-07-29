@@ -13,4 +13,4 @@
 --max_depth_eval 80
 --garg_crop
 
---checkpoint_path model_zoo/model_kittieigen.ckpt
+--checkpoint_path models/0627/newcrfs_kittieigen_fusion_alternative_split_mask/model-112000-best_rms_2.03174

@@ -1,12 +1,12 @@
 --mode train
---model_name urcd_nyu_fusion_alternative
+--model_name urcd_nyu_ablation_consis_uncertain_CouplingUnit
 --encoder large07
 --pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
 --dataset nyu
 --data_path /mnt/data/liran/dataset/nyu_depth_v2/sync/
 --gt_path /mnt/data/liran/dataset/nyu_depth_v2/sync/
 --filenames_file data_splits/nyudepthv2_train_files_with_gt_dense.txt
---batch_size 8
+--batch_size 4
 --num_epochs 50
 --learning_rate 2e-5
 --weight_decay 1e-2
@@ -19,7 +19,7 @@
 --degree 2.5
 --log_directory ./models/
 --multiprocessing_distributed
---dist_url tcp://127.0.0.1:2312
+--dist_url tcp://127.0.0.1:2344
 
 
 --log_freq 100

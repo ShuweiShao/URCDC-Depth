@@ -93,10 +93,16 @@ class DataLoadPreprocess(Dataset):
                     depth_file.replace('image_02', 'image_03')
                 # new add
                 rgb_file_random = sample_path_random.split()[0]
-                depth_file_random = os.path.join(sample_path_random.split()[0].split('/')[0], sample_path_random.split()[1])
+                depth_file_random = os.path.join(sample_path_random.split()[0].split('/')[0], sample_path_random.split()[1])                
                 if self.args.use_right is True and random.random() > 0.5:
                     rgb_file_random.replace('image_02', 'image_03')
-                    depth_file_random.replace('image_02', 'image_03')            
+                    depth_file_random.replace('image_02', 'image_03')   
+            elif self.args.dataset == 'kitti_benchmark':
+                rgb_file = sample_path.split()[0]
+                depth_file = os.path.join(sample_path.split()[0].split('/')[0], sample_path.split()[2])
+                if self.args.use_right is True and random.random() > 0.5:
+                    rgb_file.replace('image_02', 'image_03')
+                    depth_file.replace('image_02', 'image_03')
 
             else:
                 rgb_file = sample_path.split()[0]
@@ -203,6 +209,9 @@ class DataLoadPreprocess(Dataset):
                 depth_path = os.path.join(gt_path, "./" + sample_path.split()[1])
                 if self.args.dataset == 'kitti':
                     depth_path = os.path.join(gt_path, sample_path.split()[0].split('/')[0], sample_path.split()[1])
+                elif self.args.dataset == 'kitti_benchmark':
+                    # depth_path = os.path.join(gt_path, "./" + sample_path.split()[1])
+                    depth_path = gt_path+sample_path.split()[1]
                 has_valid_depth = False
                 try:
                     depth_gt = Image.open(depth_path)
@@ -231,7 +240,7 @@ class DataLoadPreprocess(Dataset):
             if self.mode == 'online_eval':
                 sample = {'image': image,'image2': image, 'depth': depth_gt, 'focal': focal, 'has_valid_depth': has_valid_depth}
             else:
-                sample = {'image': image, 'focal': focal}
+                sample = {'image': image,'image2': image ,'focal': focal}
         
         if self.transform:
             sample = self.transform(sample)
@@ -302,18 +311,11 @@ class DataLoadPreprocess(Dataset):
         image_copy = copy.deepcopy(image)
         depth_copy = copy.deepcopy(depth)
         h,w,c = image.shape
-        N = 2     # split numbers
+        N = 2    # split numbers
         h_list=[]      
         h_interval_list = []        # hight interval
-        if N==2:
-            h_list.append(random.randint(int(0.2*h), int(0.8*h)))
-        elif N==3:
-            h_list.append(random.randint(int(0.2*h), int(0.4*h)))
-            h_list.append(random.randint(int(0.6*h), int(0.8*h)))
-        elif N==4:
-            h_list.append((int(0.25*h)))
-            h_list.append((int(0.5*h)))
-            h_list.append((int(0.75*h)))        
+        for i in range(N-1):
+            h_list.append(random.randint(int(0.2*h),int(0.8*h)))
         h_list.append(h)
         h_list.append(0)  
         h_list.sort()
