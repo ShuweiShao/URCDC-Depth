@@ -10,3 +10,6 @@ This is the official PyTorch implementation of the method described in
 
 We have released the code of CutFlip, which has been incorporated into the dataloader.py.  Apart from the results shown in the article, we apply the CutFip to different algorithms, such as BTS, TransDepth and Adabins,
 
+<p align="center">
+<img src='imgs/additional_results.png' width=800/> 
+</p>
