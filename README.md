@@ -15,3 +15,12 @@ We have released the code of CutFlip, which has been incorporated into the datal
 </p>
 
 The complete source code will be available upon the acceptance.
+
+## Contact
+
+If you have any questions, please feel free to contact swshao@buaa.edu.cn.
+
+
+## Acknowledgement
+
+Our code is based on the implementation of [BTS](https://github.com/cleinc/bts) and [NewCRFs](https://github.com/aliyun/NeWCRFs). We thank their excellent works.
