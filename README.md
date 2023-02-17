@@ -16,6 +16,19 @@ We have released the code of CutFlip, which has been incorporated into the datal
 
 The complete source code will be available upon the acceptance.
 
+## ✏️ 📄 Citation
+
+If you find our work useful in your research please consider citing our paper:
+
+```
+@article{shao2023urcdc,
+  title={URCDC-Depth: Uncertainty Rectified Cross-Distillation with CutFlip for Monocular Depth Estimatione},
+  author={Shao, Shuwei and Pei, Zhongcai and Chen, Weihai and Li, Ran and Liu, Zhong and Li, Zhengguo},
+  journal={https://arxiv.org/abs/2302.08149},
+  year={2023},
+}
+```
+
 ## Contact
 
 If you have any questions, please feel free to contact swshao@buaa.edu.cn.
