@@ -1,4 +1,4 @@
-# URCDC-Depth
+# URCDC-Depth: Uncertainty Rectified Cross-Distillation with CutFlip for Monocular Depth Estimation
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/urcdc-depth-uncertainty-rectified-cross/monocular-depth-estimation-on-kitti-eigen)](https://paperswithcode.com/sota/monocular-depth-estimation-on-kitti-eigen?p=urcdc-depth-uncertainty-rectified-cross) 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/urcdc-depth-uncertainty-rectified-cross/monocular-depth-estimation-on-nyu-depth-v2)](https://paperswithcode.com/sota/monocular-depth-estimation-on-nyu-depth-v2?p=urcdc-depth-uncertainty-rectified-cross)
 
