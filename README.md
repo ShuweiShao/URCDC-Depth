@@ -1,6 +1,6 @@
 # URCDC-Depth
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/paper/urcdc-depth-uncertainty-rectified-cross)](https://paperswithcode.com/sota/monocular-depth-estimation-on-kitti-eigen?p=from-big-to-small-multi-scale-local-planar) 
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/paper/urcdc-depth-uncertainty-rectified-cross)](https://paperswithcode.com/sota/monocular-depth-estimation-on-nyu-depth-v2?p=from-big-to-small-multi-scale-local-planar)
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/paper/urcdc-depth-uncertainty-rectified-cross)](https://paperswithcode.com/sota/monocular-depth-estimation-on-kitti-eigen?p=urcdc-depth-uncertainty-rectified-cross) 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/paper/urcdc-depth-uncertainty-rectified-cross)](https://paperswithcode.com/sota/monocular-depth-estimation-on-nyu-depth-v2?p=urcdc-depth-uncertainty-rectified-cross)
 
 This is the official PyTorch implementation of the method described in
 
