@@ -287,7 +287,6 @@ class DataLoadPreprocess(Dataset):
         
         # Random gamma, brightness, color augmentation
         do_augment = random.random()
-        # do_augment2 = random.random()
         
         # bright+color
         if do_augment > 0.5:
@@ -352,8 +351,6 @@ class DataLoadPreprocess(Dataset):
         h_graft = random.randint(0,4)
         h_graft = int(h_graft//5*h)
 
-        # p = random.random()
-        # if p<0.25:
         image[:h_graft,:,:] = image_random[:h_graft,:,:]
         depth[:h_graft,:,:] = depth_random[:h_graft,:,:]
 
