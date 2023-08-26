@@ -81,8 +81,8 @@ python urcdc/eval.py configs/arguments_eval_kittieigen.txt
 ## Models
 | Model | Abs.Rel. | Sqr.Rel | RMSE | RMSElog | a1 | a2 | a3| 
 | :--- | :---: | :---: | :---: |  :---: |  :---: |  :---: |  :---: |
-|[NYUv2](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/newcrfs/models/model_nyu.ckpt) | 0.088 | - | 0.316 | - | 0.933 | 0.992 | 0.998 |
-|[KITTI_Eigen](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/newcrfs/models/model_kittieigen.ckpt) | 0.050 | 0.142 | 2.032 | 0.076 | 0.977 | 0.997 | 0.999 
+|[NYUv2] | 0.088 | - | 0.316 | - | 0.933 | 0.992 | 0.998 |
+|[KITTI_Eigen] | 0.050 | 0.142 | 2.032 | 0.076 | 0.977 | 0.997 | 0.999 
 
 ## Contact
 
