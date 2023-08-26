@@ -197,9 +197,8 @@ class DataLoadPreprocess(Dataset):
                 image_random, depth_gt_random = self.random_crop(image_random, depth_gt_random, self.args.input_height, self.args.input_width)
             # Cutflip
             image,depth_gt,h_graft = self.graft(image,depth_gt,image_random, depth_gt_random)            
-            image,depth_gt = self.split_flip(image,depth_gt,h_graft)
+            image,depth_gt = self.cutflip(image,depth_gt,h_graft)
             
-            # image,depth_gt = self.erase(image,depth_gt)
             image,image2, depth_gt = self.train_preprocess(image, depth_gt)
             sample = {'image': image, 'image2': image2,'depth': depth_gt, 'focal': focal}
         
@@ -319,7 +318,7 @@ class DataLoadPreprocess(Dataset):
 
         return image_aug
     
-    def split_flip(self,image,depth,h_graft=None):
+    def cutflip(self,image,depth,h_graft=None):
 
         p = random.random()
         if p<0.5:
@@ -358,15 +357,6 @@ class DataLoadPreprocess(Dataset):
         # if p<0.25:
         image[:h_graft,:,:] = image_random[:h_graft,:,:]
         depth[:h_graft,:,:] = depth_random[:h_graft,:,:]
-        # elif p>0.25 and p<0.5:
-        #     image[:h_graft,:,:] = image_random[h-h_graft:,:,:]
-        #     depth[:h_graft,:,:] = depth_random[h-h_graft:,:,:]
-        # elif p>0.5 and p<0.75:
-        #     image[h_graft:,:,:] = image_random[h_graft:,:,:]
-        #     depth[h_graft:,:,:] = depth_random[h_graft:,:,:]
-        # else:
-        #     image[h_graft:,:,:] = image_random[:h-h_graft,:,:]
-        #     depth[h_graft:,:,:] = depth_random[:h-h_graft,:,:]
 
         return image,depth,h_graft
 
