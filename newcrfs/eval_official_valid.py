@@ -6,9 +6,9 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 
-from utils import post_process_depth, flip_lr, compute_errors
+from utils import post_process_depth, flip_lr, compute_errors, compute_errors_kb
 from networks.NewCRFDepth import NewCRFDepth
-import torch.nn.functional as F
+
 
 def convert_arg_line_to_args(arg_line):
     for arg in arg_line.split():
@@ -52,41 +52,33 @@ if sys.argv.__len__() == 2:
 else:
     args = parser.parse_args()
 
-if args.dataset == 'kitti' or args.dataset == 'nyu' or args.dataset == 'sun_rgbd':
+if args.dataset == 'kitti' or args.dataset == 'nyu' or args.dataset == 'kitti_benchmark':
     from dataloaders.dataloader import NewDataLoader
 elif args.dataset == 'kittipred':
     from dataloaders.dataloader_kittipred import NewDataLoader
 
 
 def eval(model, dataloader_eval, post_process=False):
-    eval_measures = torch.zeros(10).cuda()
+    eval_measures = torch.zeros(11).cuda()
     for _, eval_sample_batched in enumerate(tqdm(dataloader_eval.data)):
         with torch.no_grad():
             image = torch.autograd.Variable(eval_sample_batched['image'].cuda())
             gt_depth = eval_sample_batched['depth']
             has_valid_depth = eval_sample_batched['has_valid_depth']
-            if args.dataset == 'sun_rgbd':
-                _, hh, ww, _ = gt_depth.shape
             if not has_valid_depth:
                 # print('Invalid depth. continue.')
                 continue
 
             preds = model(image)
             pred_depth = preds['pred_d']
-            pred_depth_cnn = preds['pred_d2']
 
             if post_process:
                 image_flipped = flip_lr(image)
                 preds2 = model(image_flipped)
                 pred_depth_flipped = preds2['pred_d']
-                pred_depth_flipped_cnn = preds2['pred_d2']
 
                 pred_depth = post_process_depth(pred_depth, pred_depth_flipped)
-                pred_depth_cnn = post_process_depth(pred_depth_cnn, pred_depth_flipped_cnn)
-                if args.dataset == 'sun_rgbd':
-                    pred_depth = F.interpolate(pred_depth, [hh, ww], mode="bilinear", align_corners=False)
 
-            # pred_depth = (pred_depth_cnn+pred_depth)/2
             pred_depth = pred_depth.cpu().numpy().squeeze()
             gt_depth = gt_depth.cpu().numpy().squeeze()
 
@@ -98,16 +90,18 @@ def eval(model, dataloader_eval, post_process=False):
             pred_depth_uncropped[top_margin:top_margin + 352, left_margin:left_margin + 1216] = pred_depth
             pred_depth = pred_depth_uncropped
 
-        pred_depth[pred_depth < args.min_depth_eval] = args.min_depth_eval
-        pred_depth[pred_depth > args.max_depth_eval] = args.max_depth_eval
+        # pred_depth[pred_depth < args.min_depth_eval] = args.min_depth_eval
+        # pred_depth[pred_depth > args.max_depth_eval] = args.max_depth_eval
         pred_depth[np.isinf(pred_depth)] = args.max_depth_eval
         pred_depth[np.isnan(pred_depth)] = args.min_depth_eval
 
-        if args.dataset == 'sun_rgbd':
-            pred_depth[pred_depth > 8] = 8
-            gt_depth[gt_depth > 8] = 8
+        #new add
+        # pred_depth = pred_depth[176:,:]
+        # gt_depth  = gt_depth[176:,:]
 
-        valid_mask = np.logical_and(gt_depth > args.min_depth_eval, gt_depth < args.max_depth_eval)
+
+        # valid_mask = np.logical_and(gt_depth > args.min_depth_eval, gt_depth < args.max_depth_eval)
+        valid_mask = gt_depth > args.min_depth_eval
 
         if args.garg_crop or args.eigen_crop:
             gt_height, gt_width = gt_depth.shape
@@ -119,26 +113,26 @@ def eval(model, dataloader_eval, post_process=False):
             elif args.eigen_crop:
                 if args.dataset == 'kitti':
                     eval_mask[int(0.3324324 * gt_height):int(0.91351351 * gt_height), int(0.0359477 * gt_width):int(0.96405229 * gt_width)] = 1
-                elif args.dataset == 'nyu' or args.dataset == 'sun_rgbd':
+                elif args.dataset == 'nyu':
                     eval_mask[45:471, 41:601] = 1
 
-            valid_mask = np.logical_and(valid_mask, eval_mask)
+            # valid_mask = np.logical_and(valid_mask, eval_mask)
         
-        measures = compute_errors(gt_depth[valid_mask], pred_depth[valid_mask])
+        measures = compute_errors_kb(gt_depth[valid_mask], pred_depth[valid_mask])
 
-        eval_measures[:9] += torch.tensor(measures).cuda()
-        eval_measures[9] += 1
+        eval_measures[:10] += torch.tensor(measures).cuda()
+        eval_measures[10] += 1
 
     eval_measures_cpu = eval_measures.cpu()
-    cnt = eval_measures_cpu[9].item()
+    cnt = eval_measures_cpu[10].item()
     eval_measures_cpu /= cnt
     print('Computing errors for {} eval samples'.format(int(cnt)), ', post_process: ', post_process)
-    print("{:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}".format('silog', 'abs_rel', 'log10', 'rms',
+    print("{:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}, {:>7}".format('silog', 'abs_rel', 'log10', 'rms',
                                                                                     'sq_rel', 'log_rms', 'd1', 'd2',
-                                                                                    'd3'))
-    for i in range(8):
+                                                                                    'd3','irms'))
+    for i in range(9):
         print('{:7.4f}, '.format(eval_measures_cpu[i]), end='')
-    print('{:7.4f}'.format(eval_measures_cpu[8]))
+    print('{:7.4f}'.format(eval_measures_cpu[9]))
     return eval_measures_cpu
 
 

@@ -1,12 +1,12 @@
 --mode train
---model_name urcd_kittieigen_cutmix
+--model_name urcd_kittieigen_uncer
 --encoder large07
 --pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
 --dataset kitti
 --data_path /mnt/data/liran/dataset/kitti_dataset/raw_data/
 --gt_path /mnt/data/liran/dataset/kitti_dataset/trainval2/
 --filenames_file data_splits/eigen_train_files_with_gt.txt
---batch_size 8
+--batch_size 4
 --num_epochs 50
 --learning_rate 2e-5
 --weight_decay 1e-2
@@ -20,11 +20,11 @@
 --degree 1.0
 --log_directory ./models/
 --multiprocessing_distributed
---dist_url tcp://127.0.0.1:2319
+--dist_url tcp://127.0.0.1:7077
 
---log_freq 100
+--log_freq 200
 --do_online_eval
---eval_freq 1000
+--eval_freq 500
 --data_path_eval /mnt/data/liran/dataset/kitti_dataset/raw_data/
 --gt_path_eval /mnt/data/liran/dataset/kitti_dataset/trainval2/
 --filenames_file_eval data_splits/eigen_test_files_with_gt.txt

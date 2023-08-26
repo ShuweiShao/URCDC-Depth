@@ -1,14 +1,14 @@
---model_name newcrfs_kittieigen
+--model_name newcrfs_kitti_valid
 --encoder large07
---dataset kitti
+--dataset kitti_benchmark
 --input_height 352
 --input_width 1216
 --max_depth 80
 --do_kb_crop
 
---data_path_eval /mnt/data/liran/dataset/kitti_dataset/raw_data/
---gt_path_eval /mnt/data/liran/dataset/kitti_dataset/trainval2/
---filenames_file_eval data_splits/eigen_test_files_with_gt.txt
+--data_path_eval /mnt/data/liran/dataset/
+--gt_path_eval /mnt/data/liran/dataset/
+--filenames_file_eval data_splits/kitti_official_valid.txt
 --min_depth_eval 1e-3
 --max_depth_eval 80
 --garg_crop

@@ -5,7 +5,7 @@ import random
 
 class ConvBlock(nn.Module):
 
-    def __init__(self, inplanes, med_planes, stride=1, res_conv=False, act_layer=nn.ReLU, groups=1,
+    def __init__(self, inplanes, med_planes, switch='on',stride=1, res_conv=False, act_layer=nn.ReLU, groups=1,
                 drop_block=None, drop_path=None):
         super(ConvBlock, self).__init__()
         """
@@ -29,15 +29,17 @@ class ConvBlock(nn.Module):
         self.bn3 = nn.BatchNorm2d(inplanes)
         self.act3 = act_layer(inplace=True)
         # self.drop = nn.Dropout(p=drop_rate)
+        self.switch = switch
         
     def zero_init_last_bn(self):
         nn.init.zeros_(self.bn3.weight)
 
     def forward(self, x, x_t, return_x_2=False):
+        if self.switch != 'on':
+            return x
         p = random.random()
         if p < 0.05 and self.training:
             return x     
-
         x_t = self.bn(x_t)
         x_t = self.act(x_t)
         # x_t = self.drop(x_t)
@@ -46,7 +48,7 @@ class ConvBlock(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)
-       
+
         x = self.conv2(x+x_t)
         x = self.bn2(x)
         x2 = self.act2(x)

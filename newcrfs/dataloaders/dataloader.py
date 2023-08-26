@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.utils.data.distributed
@@ -7,7 +8,9 @@ import numpy as np
 from PIL import Image
 import os
 import random
-
+import cv2
+import math
+from torchvision.transforms import *
 from utils import DistributedSamplerNoEvenlyDivisible
 import copy
 
@@ -76,9 +79,12 @@ class DataLoadPreprocess(Dataset):
         self.to_tensor = ToTensor
         self.is_for_online_eval = is_for_online_eval
         self.count = 0
+        self.sample_nums = len(self.filenames)
+        self.erase = RandomErasing()
     
     def __getitem__(self, idx):
         sample_path = self.filenames[idx]
+        sample_path_random = self.filenames[random.randint(0,len(self.filenames)-1)]
         # focal = float(sample_path.split()[2])
         focal = 518.8579
 
@@ -89,21 +95,38 @@ class DataLoadPreprocess(Dataset):
                 if self.args.use_right is True and random.random() > 0.5:
                     rgb_file.replace('image_02', 'image_03')
                     depth_file.replace('image_02', 'image_03')
+                # new add
+                rgb_file_random = sample_path_random.split()[0]
+                depth_file_random = os.path.join(sample_path_random.split()[0].split('/')[0], sample_path_random.split()[1])                
+                if self.args.use_right is True and random.random() > 0.5:
+                    rgb_file_random.replace('image_02', 'image_03')
+                    depth_file_random.replace('image_02', 'image_03')   
             elif self.args.dataset == 'kitti_benchmark':
                 rgb_file = sample_path.split()[0]
                 depth_file = os.path.join(sample_path.split()[0].split('/')[0], sample_path.split()[2])
                 if self.args.use_right is True and random.random() > 0.5:
                     rgb_file.replace('image_02', 'image_03')
                     depth_file.replace('image_02', 'image_03')
+
             else:
                 rgb_file = sample_path.split()[0]
                 depth_file = sample_path.split()[1]
+                # new add
+                rgb_file_random = sample_path_random.split()[0]
+                depth_file_random = sample_path_random.split()[1]
+
 
             image_path = os.path.join(self.args.data_path, rgb_file)
             depth_path = os.path.join(self.args.gt_path, depth_file)
+            # new add
+            image_path_random = os.path.join(self.args.data_path, rgb_file_random)
+            depth_path_random = os.path.join(self.args.gt_path, depth_file_random)            
             
             image = Image.open(image_path)
             depth_gt = Image.open(depth_path)
+            # new add
+            image_random = Image.open(image_path_random)
+            depth_gt_random = Image.open(depth_path_random)
             
             if self.args.do_kb_crop is True:
                 height = image.height
@@ -112,6 +135,13 @@ class DataLoadPreprocess(Dataset):
                 left_margin = int((width - 1216) / 2)
                 depth_gt = depth_gt.crop((left_margin, top_margin, left_margin + 1216, top_margin + 352))
                 image = image.crop((left_margin, top_margin, left_margin + 1216, top_margin + 352))
+                # new add
+                height_random = image_random.height
+                width_random = image_random.width
+                top_margin_random = int(height_random - 352)
+                left_margin_random = int((width_random - 1216) / 2)
+                depth_gt_random = depth_gt_random.crop((left_margin_random, top_margin_random, left_margin_random + 1216, top_margin_random + 352))
+                image_random = image_random.crop((left_margin_random, top_margin_random, left_margin_random + 1216, top_margin_random + 352))
             
             # To avoid blank boundaries due to pixel registration
             if self.args.dataset == 'nyu':
@@ -121,28 +151,55 @@ class DataLoadPreprocess(Dataset):
                     valid_mask[45:472, 43:608] = 1
                     depth_gt[valid_mask==0] = 0
                     depth_gt = Image.fromarray(depth_gt)
+                    # new add
+                    depth_gt_random = np.array(depth_gt_random)
+                    valid_mask_random = np.zeros_like(depth_gt_random)
+                    valid_mask_random[45:472, 43:608] = 1
+                    depth_gt_random[valid_mask_random==0] = 0
+                    depth_gt_random = Image.fromarray(depth_gt_random)                    
                 else:
                     depth_gt = depth_gt.crop((43, 45, 608, 472))
                     image = image.crop((43, 45, 608, 472))
+                    # new add
+                    depth_gt_random = depth_gt_random.crop((43, 45, 608, 472))
+                    image_random = image_random.crop((43, 45, 608, 472))
     
             if self.args.do_random_rotate is True:
                 random_angle = (random.random() - 0.5) * 2 * self.args.degree
                 image = self.rotate_image(image, random_angle)
                 depth_gt = self.rotate_image(depth_gt, random_angle, flag=Image.NEAREST)
+                # new add
+                image_random = self.rotate_image(image_random, random_angle)
+                depth_gt_random = self.rotate_image(depth_gt_random, random_angle, flag=Image.NEAREST)                
             
             image = np.asarray(image, dtype=np.float32) / 255.0
             depth_gt = np.asarray(depth_gt, dtype=np.float32)
             depth_gt = np.expand_dims(depth_gt, axis=2)
+            # new add
+            image_random = np.asarray(image_random, dtype=np.float32) / 255.0
+            depth_gt_random = np.asarray(depth_gt_random, dtype=np.float32)
+            depth_gt_random = np.expand_dims(depth_gt_random, axis=2)
+
 
             if self.args.dataset == 'nyu':
                 depth_gt = depth_gt / 1000.0
+                # new add
+                depth_gt_random = depth_gt_random / 1000.0
             else:
                 depth_gt = depth_gt / 256.0
+                # new add
+                depth_gt_random = depth_gt_random / 256.0
 
+            # random_crop
             if image.shape[0] != self.args.input_height or image.shape[1] != self.args.input_width:
                 image, depth_gt = self.random_crop(image, depth_gt, self.args.input_height, self.args.input_width)
+                # new add
+                image_random, depth_gt_random = self.random_crop(image_random, depth_gt_random, self.args.input_height, self.args.input_width)
+            # Cutflip
+            image,depth_gt,h_graft = self.graft(image,depth_gt,image_random, depth_gt_random)            
+            image,depth_gt = self.split_flip(image,depth_gt,h_graft)
             
-            # image,depth_gt = self.split_flip(image,depth_gt)
+            # image,depth_gt = self.erase(image,depth_gt)
             image,image2, depth_gt = self.train_preprocess(image, depth_gt)
             sample = {'image': image, 'image2': image2,'depth': depth_gt, 'focal': focal}
         
@@ -154,6 +211,8 @@ class DataLoadPreprocess(Dataset):
 
             image_path = os.path.join(data_path, "./" + sample_path.split()[0])
             image = np.asarray(Image.open(image_path), dtype=np.float32) / 255.0
+            if self.args.dataset =='sun_rgbd':
+                image = cv2.resize(image, (640, 480))
 
             if self.mode == 'online_eval':
                 gt_path = self.args.gt_path_eval
@@ -172,10 +231,17 @@ class DataLoadPreprocess(Dataset):
                     print('Missing gt for {}'.format(image_path))
 
                 if has_valid_depth:
-                    depth_gt = np.asarray(depth_gt, dtype=np.float32)
+                    if self.args.dataset == 'nyu':
+                        depth_gt = np.asarray(depth_gt, dtype=np.float32) #   nyu
+                    elif self.args.dataset == 'sun_rgbd':
+                        depth_gt = np.asarray(depth_gt, dtype=np.uint16) #  1 sun-rgbd
+                        depth_gt = np.bitwise_or(np.right_shift(depth_gt, 3), np.left_shift(depth_gt, 16 - 3)) # 2 sun-rgbd
                     depth_gt = np.expand_dims(depth_gt, axis=2)
                     if self.args.dataset == 'nyu':
                         depth_gt = depth_gt / 1000.0
+                    elif self.args.dataset == 'sun_rgbd':
+                        depth_gt = depth_gt.astype(np.single) / 1000 # 3 sun-rgbd
+                        depth_gt = depth_gt.astype(np.float32) # 4  sun-rgbd
                     else:
                         depth_gt = depth_gt / 256.0
 
@@ -225,11 +291,10 @@ class DataLoadPreprocess(Dataset):
         do_augment = random.random()
         # do_augment2 = random.random()
         
+        # bright+color
         if do_augment > 0.5:
             image = self.augment_image(image)
         image2 = copy.deepcopy(image)          
-        # if do_augment2 > 0.5:
-        #     image2 = self.augment_image(image2)
 
         return image,image2,depth_gt
     
@@ -254,7 +319,7 @@ class DataLoadPreprocess(Dataset):
 
         return image_aug
     
-    def split_flip(self,image,depth):
+    def split_flip(self,image,depth,h_graft=None):
 
         p = random.random()
         if p<0.5:
@@ -266,7 +331,10 @@ class DataLoadPreprocess(Dataset):
         h_list=[]      
         h_interval_list = []        # hight interval
         for i in range(N-1):
-            h_list.append(random.randint(int(0.2*h),int(0.8*h)))
+            if h_graft!=None:
+                h_list.append(h_graft)
+            else:
+                h_list.append(random.randint(int(0.2*h),int(0.8*h)))
         h_list.append(h)
         h_list.append(0)  
         h_list.sort()
@@ -279,6 +347,52 @@ class DataLoadPreprocess(Dataset):
             depth[h_list[i]:h_list[i+1],:,:] = depth_copy[h_list_inv[i]-h_interval_list[i]:h_list_inv[i],:,:]
         return image,depth
 
+    def graft(self,image,depth,image_random,depth_random):
+        if random.random()<0.5:
+            return image,depth,None
+        h,w,c = image.shape
+        h_graft = random.randint(0,4)
+        h_graft = int(h_graft//5*h)
+
+        # p = random.random()
+        # if p<0.25:
+        image[:h_graft,:,:] = image_random[:h_graft,:,:]
+        depth[:h_graft,:,:] = depth_random[:h_graft,:,:]
+        # elif p>0.25 and p<0.5:
+        #     image[:h_graft,:,:] = image_random[h-h_graft:,:,:]
+        #     depth[:h_graft,:,:] = depth_random[h-h_graft:,:,:]
+        # elif p>0.5 and p<0.75:
+        #     image[h_graft:,:,:] = image_random[h_graft:,:,:]
+        #     depth[h_graft:,:,:] = depth_random[h_graft:,:,:]
+        # else:
+        #     image[h_graft:,:,:] = image_random[:h-h_graft,:,:]
+        #     depth[h_graft:,:,:] = depth_random[:h-h_graft,:,:]
+
+        return image,depth,h_graft
+
+    def cutout(self,image,depth):
+        if random.random()<0.5:
+            return image,depth
+        image_random = np.zeros_like(image)
+        depth_random = np.zeros_like(depth)
+        h,w,c = image.shape
+        h_mask = random.randint(int(0.4*h),int(0.6*h))
+        w_mask = random.randint(int(0.4*w),int(0.6*w))
+        p = random.random()
+        if p<0.25:
+            image[:h_mask,:w_mask,:] = image_random[:h_mask,:w_mask,:]
+            depth[:h_mask,:w_mask,:] = depth_random[:h_mask,:w_mask,:]
+        elif p>0.25 and p<0.5:
+            image[h-h_mask:,:w_mask,:] = image_random[h-h_mask:,:w_mask,:]
+            depth[h-h_mask:,:w_mask,:] = depth_random[h-h_mask:,:w_mask,:]
+        elif p>0.5 and p<0.75:
+            image[:h_mask,w-w_mask:,:] = image_random[:h_mask,w-w_mask:,:]
+            depth[:h_mask,w-w_mask:,:] = depth_random[:h_mask,w-w_mask:,:]
+        else:
+            image[h-h_mask:,w-w_mask:,:] = image_random[h-h_mask:,w-w_mask:,:]
+            depth[h-h_mask:,w-w_mask:,:]= depth_random[h-h_mask:,w-w_mask:,:]
+
+        return image,depth
 
     def __len__(self):
         return len(self.filenames)
@@ -304,6 +418,50 @@ class DataLoadPreprocess(Dataset):
         self.count += 1
 
         return image
+
+class RandomErasing(object):
+    def __init__(self, EPSILON = 0.5, sl = 0.02, sh = 0.4, r1 = 0.3, mean=[0.4914, 0.4822, 0.4465]):
+        self.EPSILON = EPSILON
+        self.mean = mean
+        self.sl = sl
+        self.sh = sh
+        self.r1 = r1
+       
+    def __call__(self, img,depth_gt):
+
+        if random.uniform(0, 1) > self.EPSILON:
+            return img,depth_gt
+
+        h_,w_,c = img.shape
+        for attempt in range(100):
+            area = h_*w_
+       
+            target_area = random.uniform(self.sl, self.sh) * area
+            aspect_ratio = random.uniform(self.r1, 1/self.r1)
+
+            h = int(round(math.sqrt(target_area * aspect_ratio)))
+            w = int(round(math.sqrt(target_area / aspect_ratio)))
+
+            if w < w_ and h < h_:
+                x1 = random.randint(0, h_ - h)
+                y1 = random.randint(0, w_ - w)
+                if c == 3:
+                    #img[0, x1:x1+h, y1:y1+w] = random.uniform(0, 1)
+                    #img[1, x1:x1+h, y1:y1+w] = random.uniform(0, 1)
+                    #img[2, x1:x1+h, y1:y1+w] = random.uniform(0, 1)
+                    img[x1:x1+h, y1:y1+w,0] = self.mean[0]
+                    img[x1:x1+h, y1:y1+w,1] = self.mean[1]
+                    img[x1:x1+h, y1:y1+w,2] = self.mean[2]
+                    #img[:, x1:x1+h, y1:y1+w] = torch.from_numpy(np.random.rand(3, h, w))
+                    depth_gt[x1:x1+h, y1:y1+w,0] = self.mean[1]
+                else:
+                    img[x1:x1+h, y1:y1+w,0] = self.mean[1]
+                    # img[0, x1:x1+h, y1:y1+w] = torch.from_numpy(np.random.rand(1, h, w))
+                    depth_gt[x1:x1+h, y1:y1+w,0] = self.mean[1]
+                return img,depth_gt
+
+        return img,depth_gt
+
 
 class ToTensor(object):
     def __init__(self, mode):

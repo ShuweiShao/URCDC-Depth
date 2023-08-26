@@ -1,4 +1,4 @@
---model_name urcd_nyu_cnn_viz
+--model_name urcd_nyu_viz
 --encoder large07
 --dataset nyu
 --input_height 480
@@ -9,4 +9,4 @@
 --filenames_file data_splits/nyudepthv2_test_files_with_gt.txt
 --max_depth 10
 --save_viz
---checkpoint_path models/0521/newcrfs_nyu_fusion_alternative/model-85500-best_rms_0.31641
+--checkpoint_path /mnt/data2/datasets/liran/URCD/0521/newcrfs_nyu_fusion_alternative/model-85500-best_rms_0.31641

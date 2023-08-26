@@ -487,18 +487,39 @@ class SwinTransformer(nn.Module):
                  frozen_stages=-1,
                  use_checkpoint=False):
         super().__init__()
-        #---------------------------DenseNet161-------------------------------
+        # #---------------------------DenseNet161-------------------------------
         self.base_model = models.densenet161(pretrained=True).features
         self.feat_names = ['relu0', 'pool0', 'transition1', 'transition2', 'norm5']
         self.feat_out_channels = [96, 96, 192, 384, 2208]
 
-        self.fusion1 = ConvBlock(96, 192)
-        self.fusion2 = ConvBlock(192, 384)
-        self.fusion3 = ConvBlock(384, 768)
-        self.fusion4 = ConvBlock(2208, 1536)
+        self.fusion1 = ConvBlock(96, 192,'on')
+        self.fusion2 = ConvBlock(192, 384,'on')
+        self.fusion3 = ConvBlock(384, 768,'on')
+        self.fusion4 = ConvBlock(2208, 1536,'on')
         self.fusion_t2c = [self.fusion1, self.fusion2, self.fusion3, self.fusion4]
 
-        #---------------------------DenseNet161-------------------------------
+        #---------------------------ResNet101-------------------------------
+        # self.base_model = models.resnet101(pretrained=True)
+        # self.feat_names = ['relu', 'layer1', 'layer2', 'layer3', 'layer4']
+        # self.feat_out_channels = [64, 256, 512, 1024, 2048]
+
+        # self.fusion1 = ConvBlock(256, 192)
+        # self.fusion2 = ConvBlock(512, 384)
+        # self.fusion3 = ConvBlock(1024, 768)
+        # self.fusion4 = ConvBlock(2048, 1536)
+        # self.fusion_t2c = [self.fusion1, self.fusion2, self.fusion3, self.fusion4]
+
+        # #---------------------------ResNeXt50-------------------------------
+        # self.base_model = models.resnext50_32x4d(pretrained=True)
+        # self.feat_names = ['relu', 'layer1', 'layer2', 'layer3', 'layer4']
+        # self.feat_out_channels = [64, 256, 512, 1024, 2048]
+        # self.fusion1 = ConvBlock(256, 192)
+        # self.fusion2 = ConvBlock(512, 384)
+        # self.fusion3 = ConvBlock(1024, 768)
+        # self.fusion4 = ConvBlock(2048, 1536)
+        # self.fusion_t2c = [self.fusion1, self.fusion2, self.fusion3, self.fusion4]
+
+
         self.pretrain_img_size = pretrain_img_size
         self.num_layers = len(depths)
         self.embed_dim = embed_dim
@@ -616,15 +637,17 @@ class SwinTransformer(nn.Module):
             x = x.flatten(2).transpose(1, 2)
         x = self.pos_drop(x)
 
-        outs = []
-        skip_feat = []
+        trans_feat = []
+        cnn_feat = []
         i = 0
         for k, v in self.base_model._modules.items():
             if 'fc' in k or 'avgpool' in k:
                 continue
             feature = v(feature)
             if any(x in k for x in self.feat_names):
-                if('relu0' not in k):
+                # if('relu0' in k): # cnn 5个特征层
+                #     cnn_feat.append(feature)
+                if('relu0' not in k) and ('relu' not in k):
                     layer = self.layers[i]
                     x_out, H, W, x, Wh, Ww = layer(x, Wh, Ww)# features in
                     if i in self.out_indices:
@@ -633,10 +656,10 @@ class SwinTransformer(nn.Module):
                         out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
                         feature = self.fusion_t2c[i](feature, out.detach())
                         i = i + 1
-                        skip_feat.append(feature)  
-                        outs.append(out)    
+                        cnn_feat.append(feature)  
+                        trans_feat.append(out)    
         
-        return outs,skip_feat
+        return trans_feat,cnn_feat
 
     def train(self, mode=True):
         """Convert the model into training mode while keep layers freezed."""

@@ -44,7 +44,7 @@ if sys.argv.__len__() == 2:
 else:
     args = parser.parse_args()
 
-if args.dataset == 'kitti' or args.dataset == 'nyu' or args.dataset == 'kitti_benchmark':
+if args.dataset == 'kitti' or args.dataset == 'nyu' or args.dataset == 'kitti_benchmark' or args.dataset == 'nyu_beihang' or args.dataset == 'kitti_beihang':
     from dataloaders.dataloader import NewDataLoader
 elif args.dataset == 'kittipred':
     from dataloaders.dataloader_kittipred import NewDataLoader
@@ -92,7 +92,7 @@ def test(params):
             image = Variable(sample['image'].cuda())
             # Predict
             preds = model(image)
-            pred_depth = preds['pred_d2']
+            pred_depth = preds['pred_d']
             u_1 = preds['u1'] 
             u_2 = preds['u2'] 
 
@@ -140,7 +140,7 @@ def test(params):
                 raise
     
     for s in tqdm(range(num_test_samples)):
-        if args.dataset == 'kitti':
+        if args.dataset == 'kitti' or args.dataset == 'kitti_beihang':
             date_drive = lines[s].split('/')[1]
             filename_pred_png = save_name + '/raw/' + date_drive + '_' + lines[s].split()[0].split('/')[-1].replace(
                 '.png', '_urcd.png')
@@ -157,6 +157,10 @@ def test(params):
             filename_image_png = save_name + '/rgb/' + lines[s].split()[0].split('/')[-1]
             filename_u1 = save_name + '/u1/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
             filename_u2 = save_name + '/u2/' + lines[s].split()[0].split('/')[-1].replace('.jpg', '.png')
+        elif args.dataset == 'nyu_beihang':
+            scene_name = lines[s].split()[0].split('/')[0]
+            filename_pred_png = save_name + '/raw/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace('.jpg', '.png')
+            filename_cmap_png = save_name + '/cmap/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace('.jpg', '_urcd.png')            
         else:
             scene_name = lines[s].split()[0].split('/')[0]
             filename_pred_png = save_name + '/raw/' + scene_name + '_' + lines[s].split()[0].split('/')[1].replace(
@@ -172,7 +176,7 @@ def test(params):
                 '.jpg', '_u2.png')
         rgb_path = os.path.join(args.data_path, './' + lines[s].split()[0])
         image = cv2.imread(rgb_path)
-        if args.dataset == 'nyu':
+        if args.dataset == 'nyu' or args.dataset == 'nyu_beihang':
             gt_path = os.path.join(args.data_path, './' + lines[s].split()[1])
             gt = cv2.imread(gt_path, -1).astype(np.float32) / 1000.0  # Visualization purpose only
             # gt[gt == 0] = np.amax(gt)
@@ -182,7 +186,7 @@ def test(params):
         u_2 = u2_list[s]
 
         
-        if args.dataset == 'kitti' or args.dataset == 'kitti_benchmark':
+        if args.dataset == 'kitti' or args.dataset == 'kitti_benchmark' or args.dataset == 'kitti_beihang':
             pred_depth_scaled = pred_depth * 256.0
         else:
             pred_depth_scaled = pred_depth * 1000.0
@@ -200,6 +204,12 @@ def test(params):
                 plt.imsave(filename_cmap_png, np.log10(pred_depth[10:-1 - 9, 10:-1 - 9]), cmap='jet')
                 plt.imsave(filename_u1, u_1[10:-1 - 9, 10:-1 - 9], cmap='jet')
                 plt.imsave(filename_u2, u_2[10:-1 - 9, 10:-1 - 9], cmap='jet')
+            elif args.dataset == 'nyu_beihang':
+                plt.imsave(filename_cmap_png, np.log10(pred_depth), cmap='jet')
+                print("max depth:%.2f m"%(pred_depth.max()))
+            elif args.dataset == 'kitti_beihang':
+                plt.imsave(filename_cmap_png, np.log10(pred_depth), cmap='magma')
+                print("max depth:%.2f m"%(pred_depth.max()))
             else:
                 plt.imsave(filename_cmap_png, np.log10(pred_depth), cmap='magma')
                 # plt.imsave(filename_cmap_png, pred_depth, cmap='magma')

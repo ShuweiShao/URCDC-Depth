@@ -1,5 +1,5 @@
 --mode train
---model_name urcd_nyu_ablation_consis_uncertain_CouplingUnit
+--model_name urcd_nyu_uncer
 --encoder large07
 --pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
 --dataset nyu

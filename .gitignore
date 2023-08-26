@@ -5,3 +5,8 @@ models
 datasets
 files
 *.log
+compute_cost.py
+preprocess.py
+*beihang*.txt
+newcrfs/dataloaders/dataloader1.py
+newcrfs/dataloaders/dataloader2.py

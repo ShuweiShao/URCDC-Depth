@@ -6,6 +6,8 @@ from .swin_transformer import SwinTransformer
 from .newcrf_layers import NewCRF
 from .uper_crf_head import PSP
 from .conformer_blocks import ConvBlock
+import math
+import copy
 ########################################################################################################################
 
 
@@ -94,9 +96,11 @@ class NewCRFDepth(nn.Module):
 
         self.init_weights(pretrained=pretrained)
 
-        #----------------------------------------CNN---------------------------------
-        channels_in2 = [2208, 384, 192]
-        channels_out2 = 96 ##channels of max resolution
+        #--------------------------------------GLP CNN decoder---------------------------------
+        channels_in2 = [2208, 384, 192] # encoder的输出通道 densenet161
+        channels_out2 = 96 ##channels of max resolution densenet161
+        # # channels_in2 = [2048, 1024, 512] # encoder的输出通道 resnet101/resnext101        
+        # # channels_out2 = 256 ##channels of max resolution resnet101/resnext101
 
         self.decoder2 = Decoder_CNN(channels_in2, channels_out2)
 
@@ -109,14 +113,6 @@ class NewCRFDepth(nn.Module):
             nn.ReLU(inplace=False),
             nn.Conv2d(channels_out2, 1, kernel_size=3, stride=1, padding=1),
             nn.Sigmoid())
-
-        # self.fusion1 = ConvBlock(96,192)
-        # self.fusion2 = ConvBlock(192,384)
-        # self.fusion3 = ConvBlock(384,768)
-        # self.fusion4 = ConvBlock(2208,1536)
-        # self.fusion_t2c = [self.fusion1,self.fusion2,self.fusion3,self.fusion4]
-
-        #----------------------------------------------------------------------------
 
     def init_weights(self, pretrained=None):
         """Initialize the weights in backbone and heads.
@@ -173,18 +169,18 @@ class NewCRFDepth(nn.Module):
         else:
             d1 = self.disp_head1(e0, 4)
             u1 = self.uncer_head1(e0, 4)
-
         out_depth1 = d1 * self.max_depth
 
-        # for i in range(4):
-        #     feats_cnn[i] = self.fusion_t2c[i](feats_cnn[i],feats[i].detach())
-
+        # # GLP CNN decoder
         out2 = self.decoder2(feats_cnn[0],feats_cnn[1],feats_cnn[2],feats_cnn[3])
         out_depth2 = self.last_layer_depth(out2)
         out_depth2 = torch.sigmoid(out_depth2) * self.max_depth
         u2 = self.last_layer_uncer(out2)
-        # return {'pred_d': out_depth1,'pred_d2': out_depth2}
+
         return {'pred_d': out_depth1,'pred_d2': out_depth2,'u1':u1,'u2':u2}
+    
+
+
 
 class DispHead(nn.Module):
     def __init__(self, input_dim=100):
@@ -240,6 +236,7 @@ def upsample(x, scale_factor=2, mode="bilinear", align_corners=False):
     """
     return F.interpolate(x, scale_factor=scale_factor, mode=mode, align_corners=align_corners)
 
+# GLP decoder
 class Decoder_CNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -311,3 +308,4 @@ class SelectiveFeatureFusion(nn.Module):
               x_global * attn[:, 1, :, :].unsqueeze(1)
 
         return out
+    

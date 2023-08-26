@@ -12,4 +12,4 @@
 --max_depth_eval 10
 --eigen_crop
 
---checkpoint_path models/newcrfs_nyu/model-60000-best_rms_0.31978
+--checkpoint_path /mnt/data2/datasets/liran/URCD/0521/newcrfs_nyu_fusion_alternative/model-85500-best_rms_0.31641
