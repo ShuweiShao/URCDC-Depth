@@ -1,0 +1,16 @@
+--model_name newcrfs_kittieigen
+--encoder large07
+--dataset kitti
+--input_height 352
+--input_width 1216
+--max_depth 80
+--do_kb_crop
+
+--data_path_eval /mnt/data/liran/dataset/kitti_dataset/raw_data/
+--gt_path_eval /mnt/data/liran/dataset/kitti_dataset/trainval2/
+--filenames_file_eval data_splits/eigen_test_files_with_gt.txt
+--min_depth_eval 1e-3
+--max_depth_eval 80
+--garg_crop
+
+--checkpoint_path /mnt/data2/datasets/liran/URCD/0627/newcrfs_kittieigen_fusion_alternative_split_mask/model-112000-best_rms_2.03174
