@@ -33,6 +33,56 @@ If you find our work useful in your research please consider citing our paper:
   year={2023},
 }
 ```
+## Contents
+1. [Installation](#installation)
+2. [Datasets](#datasets)
+3. [Training](#training)
+4. [Evaluation](#evaluation)
+5. [Models](#models)
+
+## Installation
+```
+conda create -n urcdc python=3.8
+conda activate urcdc
+conda install pytorch=1.10.0 torchvision cudatoolkit=11.1
+pip install matplotlib, tqdm, tensorboardX, timm, mmcv
+```
+
+
+## Datasets
+You can prepare the datasets KITTI and NYUv2 according to [here](https://github.com/cleinc/bts), and then modify the data path in the config files to your dataset locations.
+
+
+## Training
+First download the pretrained encoder backbone from [here](https://github.com/microsoft/Swin-Transformer), and then modify the pretrain path in the config files.
+
+Training the NYUv2 model:
+```
+python urcdc/train.py configs/arguments_train_nyu.txt
+```
+
+Training the KITTI model:
+```
+python urcdc/train.py configs/arguments_train_kittieigen.txt
+```
+
+
+## Evaluation
+Evaluate the NYUv2 model:
+```
+python urcdc/eval.py configs/arguments_eval_nyu.txt
+```
+
+Evaluate the KITTI model:
+```
+python urcdc/eval.py configs/arguments_eval_kittieigen.txt
+```
+
+## Models
+| Model | Abs.Rel. | Sqr.Rel | RMSE | RMSElog | a1 | a2 | a3| 
+| :--- | :---: | :---: | :---: |  :---: |  :---: |  :---: |  :---: |
+|[NYUv2](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/newcrfs/models/model_nyu.ckpt) | 0.088 | - | 0.316 | - | 0.933 | 0.992 | 0.998 |
+|[KITTI_Eigen](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/newcrfs/models/model_kittieigen.ckpt) | 0.050 | 0.142 | 2.032 | 0.076 | 0.977 | 0.997 | 0.999 
 
 ## Contact
 
