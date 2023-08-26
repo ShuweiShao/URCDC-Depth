@@ -285,7 +285,6 @@ class DataLoadPreprocess(Dataset):
             image = (image[:, ::-1, :]).copy()
             depth_gt = (depth_gt[:, ::-1, :]).copy()
         
-        # image = self.cutdepth(image, depth_gt)
         # Random gamma, brightness, color augmentation
         do_augment = random.random()
         # do_augment2 = random.random()
@@ -360,54 +359,8 @@ class DataLoadPreprocess(Dataset):
 
         return image,depth,h_graft
 
-    def cutout(self,image,depth):
-        if random.random()<0.5:
-            return image,depth
-        image_random = np.zeros_like(image)
-        depth_random = np.zeros_like(depth)
-        h,w,c = image.shape
-        h_mask = random.randint(int(0.4*h),int(0.6*h))
-        w_mask = random.randint(int(0.4*w),int(0.6*w))
-        p = random.random()
-        if p<0.25:
-            image[:h_mask,:w_mask,:] = image_random[:h_mask,:w_mask,:]
-            depth[:h_mask,:w_mask,:] = depth_random[:h_mask,:w_mask,:]
-        elif p>0.25 and p<0.5:
-            image[h-h_mask:,:w_mask,:] = image_random[h-h_mask:,:w_mask,:]
-            depth[h-h_mask:,:w_mask,:] = depth_random[h-h_mask:,:w_mask,:]
-        elif p>0.5 and p<0.75:
-            image[:h_mask,w-w_mask:,:] = image_random[:h_mask,w-w_mask:,:]
-            depth[:h_mask,w-w_mask:,:] = depth_random[:h_mask,w-w_mask:,:]
-        else:
-            image[h-h_mask:,w-w_mask:,:] = image_random[h-h_mask:,w-w_mask:,:]
-            depth[h-h_mask:,w-w_mask:,:]= depth_random[h-h_mask:,w-w_mask:,:]
-
-        return image,depth
-
     def __len__(self):
         return len(self.filenames)
-
-    def cutdepth(self, image, depth):
-        H, W, C = image.shape
-
-        if self.count % 4 == 0:
-            alpha = random.random()
-            beta = random.random()
-            p = 0.75
-
-            l = int(alpha * W)
-            w = int(max((W - alpha * W) * beta * p, 1))
-            if self.args.dataset == 'nyu':
-                image[:, l:l+w, 0] = depth[:, l:l+w, 0] / 10.0
-                image[:, l:l+w, 1] = depth[:, l:l+w, 0] / 10.0
-                image[:, l:l+w, 2] = depth[:, l:l+w, 0] / 10.0
-            else :
-                image[:, l:l+w, 0] = depth[:, l:l+w, 0] / 80.0
-                image[:, l:l+w, 1] = depth[:, l:l+w, 0] / 80.0
-                image[:, l:l+w, 2] = depth[:, l:l+w, 0] / 80.0
-        self.count += 1
-
-        return image
 
 class RandomErasing(object):
     def __init__(self, EPSILON = 0.5, sl = 0.02, sh = 0.4, r1 = 0.3, mean=[0.4914, 0.4822, 0.4465]):
