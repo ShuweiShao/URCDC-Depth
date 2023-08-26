@@ -1,35 +1,36 @@
-## NeW CRFs: Neural Window Fully-connected CRFs for Monocular Depth Estimation
+# URCDC-Depth: Uncertainty Rectified Cross-Distillation with CutFlip for Monocular Depth Estimation
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/urcdc-depth-uncertainty-rectified-cross/monocular-depth-estimation-on-kitti-eigen)](https://paperswithcode.com/sota/monocular-depth-estimation-on-kitti-eigen?p=urcdc-depth-uncertainty-rectified-cross) 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/urcdc-depth-uncertainty-rectified-cross/monocular-depth-estimation-on-nyu-depth-v2)](https://paperswithcode.com/sota/monocular-depth-estimation-on-nyu-depth-v2?p=urcdc-depth-uncertainty-rectified-cross)
 
-This is the official PyTorch implementation code for NeWCRFs. For technical details, please refer to:
+This is the official PyTorch implementation of the method described in
 
-**NeW CRFs: Neural Window Fully-connected CRFs for Monocular Depth Estimation** <br />
-Weihao Yuan, Xiaodong Gu, Zuozhuo Dai, Siyu Zhu, Ping Tan <br />
-**CVPR 2022** <br />
-**[[Project Page](https://weihaosky.github.io/newcrfs/)]** | 
-**[[Paper](https://arxiv.org/abs/2203.01502)]** <br />
+> **URCDC-Depth: Uncertainty Rectified Cross-Distillation with CutFlip for Monocular Depth Estimation** 
 
+[[Link to paper]](https://arxiv.org/abs/2302.08149)
+>
+> [Shuwei Shao](https://scholar.google.com.hk/citations?hl=zh-CN&user=ecZHSVQAAAAJ), Zhongcai Pei, [Weihai Chen](https://scholar.google.com.hk/citations?hl=zh-CN&user=5PoZrcYAAAAJ), Ran Li, Zhong Liu and [Zhengguo Li](https://scholar.google.com.hk/citations?hl=zh-CN&user=LiUX7WQAAAAJ)
+>
 
-<p float="left">
-  &emsp;&emsp; <img src="files/intro.png" width="400" />
+## Overview
+
+We have released the code of CutFlip, which has been incorporated into the dataloader.py.  Apart from the results shown in the article, we apply the CutFip to different monocular depth estimation algorithms on the KITTI dataset, such as BTS, TransDepth and Adabins,
+
+<p align="center">
+<img src='images/additional_results.png' width=800/> 
 </p>
-<!-- <p float="left">
-  <img src="files/office_00633.jpg" width="200" />
-  <img src="files/office_00633_depth.jpg" width="200" />
-  <img src="files/office_00633_pcd.jpg" width="240" />
-</p> -->
 
-![Output1](files/output_nyu2_compressed.gif)
+The complete source code will be available upon the acceptance.
 
-## Bibtex
-If you find this code useful in your research, please cite:
+## ✏️ 📄 Citation
+
+If you find our work useful in your research please consider citing our paper:
 
 ```
-@inproceedings{yuan2022newcrfs,
-  title={NeWCRFs: Neural Window Fully-connected CRFs for Monocular Depth Estimation},
-  author={Yuan, Weihao and Gu, Xiaodong and Dai, Zuozhuo and Zhu, Siyu and Tan, Ping},
-  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
-  pages={},
-  year={2022}
+@article{shao2023urcdc,
+  title={URCDC-Depth: Uncertainty Rectified Cross-Distillation with CutFlip for Monocular Depth Estimatione},
+  author={Shao, Shuwei and Pei, Zhongcai and Chen, Weihai and Li, Ran and Liu, Zhong and Li, Zhengguo},
+  journal={https://arxiv.org/abs/2302.08149},
+  year={2023},
 }
 ```
 
@@ -104,6 +105,11 @@ python newcrfs/demo.py --dataset nyu --checkpoint_path model_zoo/model_nyu.ckpt 
 
 [Demo video3](https://www.youtube.com/watch?v=IztmOYZNirM)
 
-## Acknowledgements
-Thanks to Jin Han Lee for opening source of the excellent work [BTS](https://github.com/cleinc/bts).
-Thanks to Microsoft Research Asia for opening source of the excellent work [Swin Transformer](https://github.com/microsoft/Swin-Transformer).
+## Contact
+
+If you have any questions, please feel free to contact swshao@buaa.edu.cn.
+
+
+## Acknowledgement
+
+Our code is based on the implementation of [BTS](https://github.com/cleinc/bts) and [NewCRFs](https://github.com/aliyun/NeWCRFs). We thank their excellent works.
