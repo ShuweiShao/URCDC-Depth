@@ -1,0 +1,12 @@
+--model_name urcd_kittieigen_viz
+--encoder large07
+--dataset kitti
+--input_height 352
+--input_width 1216
+--max_depth 80
+--do_kb_crop
+--data_path /mnt/data/liran/dataset/kitti_dataset/raw_data/
+--filenames_file data_splits/eigen_test_files_with_gt.txt
+--max_depth 80
+--save_viz
+--checkpoint_path /mnt/data2/datasets/liran/URCD/0627/newcrfs_kittieigen_fusion_alternative_split_mask/model-112000-best_rms_2.03174
