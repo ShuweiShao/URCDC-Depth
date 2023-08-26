@@ -29,7 +29,7 @@ If you find our work useful in your research please consider citing our paper:
 @article{shao2023urcdc,
   title={URCDC-Depth: Uncertainty Rectified Cross-Distillation with CutFlip for Monocular Depth Estimatione},
   author={Shao, Shuwei and Pei, Zhongcai and Chen, Weihai and Li, Ran and Liu, Zhong and Li, Zhengguo},
-  journal={https://arxiv.org/abs/2302.08149},
+  journal={IEEE Transactions on Multimedia},
   year={2023},
 }
 ```
