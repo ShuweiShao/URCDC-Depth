@@ -1,0 +1,34 @@
+--mode train
+--model_name urcdc_kitti_benchmark_fusion_alternative_split_mask
+--encoder large07
+--pretrain model_zoo/swin_transformer/swin_large_patch4_window7_224_22k.pth
+--dataset kitti_benchmark
+--data_path /mnt/data/liran/dataset/kitti_dataset/raw_data/
+--gt_path /mnt/data/liran/dataset/kitti_dataset/trainval2/
+--filenames_file data_splits/kitti_depth_prediction_train.txt
+--batch_size 8
+--num_epochs 50
+--learning_rate 2e-5
+--weight_decay 1e-2
+--adam_eps 1e-3
+--num_threads 1
+--input_height 352
+--input_width 1120
+--max_depth 80
+--do_kb_crop
+--do_random_rotate
+--degree 1.0
+--log_directory ./models/
+--multiprocessing_distributed
+--dist_url tcp://127.0.0.1:2347
+--use_right
+
+--log_freq 100
+--do_online_eval
+--eval_freq 1000
+--data_path_eval /mnt/data/liran/dataset/
+--gt_path_eval /mnt/data/liran/dataset/
+--filenames_file_eval data_splits/kitti_official_valid.txt
+--min_depth_eval 1e-3
+--max_depth_eval 80
+--garg_crop

@@ -1,0 +1,13 @@
+--model_name urcdc_kitti_benchmark_silog_6.5814
+--encoder large07
+--dataset kitti
+--input_height 352
+--input_width 1216
+--max_depth 80
+--do_kb_crop
+
+--data_path /mnt/data/liran/dataset/
+--filenames_file data_splits/kitti_official_test.txt
+--max_depth 80
+--save_viz
+--checkpoint_path models/0704/newcrfs_kitti_benchmark_fusion_alternative_split_mask/model-258000-best_silog_6.85140
