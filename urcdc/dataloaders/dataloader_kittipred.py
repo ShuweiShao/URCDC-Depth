@@ -85,8 +85,8 @@ class DataLoadPreprocess(Dataset):
             rgb_file = sample_path.split()[0]
             depth_file = rgb_file.replace('/image_02/data/', '/proj_depth/groundtruth/image_02/')
             if self.args.use_right is True and random.random() > 0.5:
-                rgb_file.replace('image_02', 'image_03')
-                depth_file.replace('image_02', 'image_03')
+                rgb_file = rgb_file.replace('image_02', 'image_03')
+                depth_file = depth_file.replace('image_02', 'image_03')
 
             image_path = os.path.join(self.args.data_path, rgb_file)
             depth_path = os.path.join(self.args.gt_path, depth_file)

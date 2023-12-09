@@ -92,20 +92,20 @@ class DataLoadPreprocess(Dataset):
                 rgb_file = sample_path.split()[0]
                 depth_file = os.path.join(sample_path.split()[0].split('/')[0], sample_path.split()[1])
                 if self.args.use_right is True and random.random() > 0.5:
-                    rgb_file.replace('image_02', 'image_03')
-                    depth_file.replace('image_02', 'image_03')
+                    rgb_file = rgb_file.replace('image_02', 'image_03')
+                    depth_file = depth_file.replace('image_02', 'image_03')
                 # new add
                 rgb_file_random = sample_path_random.split()[0]
                 depth_file_random = os.path.join(sample_path_random.split()[0].split('/')[0], sample_path_random.split()[1])                
                 if self.args.use_right is True and random.random() > 0.5:
-                    rgb_file_random.replace('image_02', 'image_03')
-                    depth_file_random.replace('image_02', 'image_03')   
+                    rgb_file_random = rgb_file_random.replace('image_02', 'image_03')
+                    depth_file_random = depth_file_random.replace('image_02', 'image_03')   
             elif self.args.dataset == 'kitti_benchmark':
                 rgb_file = sample_path.split()[0]
                 depth_file = os.path.join(sample_path.split()[0].split('/')[0], sample_path.split()[2])
                 if self.args.use_right is True and random.random() > 0.5:
-                    rgb_file.replace('image_02', 'image_03')
-                    depth_file.replace('image_02', 'image_03')
+                    rgb_file = rgb_file.replace('image_02', 'image_03')
+                    depth_file = depth_file.replace('image_02', 'image_03')
 
             else:
                 rgb_file = sample_path.split()[0]
