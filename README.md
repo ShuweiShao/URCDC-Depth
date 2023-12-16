@@ -50,7 +50,7 @@ pip install matplotlib, tqdm, tensorboardX, timm, mmcv
 
 
 ## Datasets
-You can prepare the datasets KITTI and NYUv2 according to [here](https://github.com/cleinc/bts), and then modify the data path in the config files to your dataset locations.
+You can prepare the datasets KITTI and NYUv2 according to [here](https://github.com/cleinc/bts/tree/master/pytorch), and then modify the data path in the config files to your dataset locations.
 
 
 ## Training
